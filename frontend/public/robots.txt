@@ -1,0 +1,6 @@
+# robots.txt for A2 CRAVINGS
+User-agent: *
+Allow: /
+
+# Production Note: Uncomment and update with the live production domain once assigned
+# Sitemap: https://<YOUR-PRODUCTION-DOMAIN>/sitemap.xml

@@ -1,0 +1,183 @@
+/* ==========================================================================
+   A2 CRAVINGS — 3D & MOTION ANIMATIONS
+   GPU-accelerated, performant, respects prefers-reduced-motion
+   ========================================================================== */
+
+/* Keyframe: Navbar Slide Down Reveal */
+@keyframes navSlideDown {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Keyframe: Floating WhatsApp Button Subtle 3D Pulse */
+@keyframes floatWhatsApp {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+    box-shadow: 0 4px 18px rgba(255, 140, 0, 0.45);
+  }
+  50% {
+    transform: translateY(-3px) rotate(0.8deg);
+    box-shadow: 0 8px 26px rgba(255, 140, 0, 0.65), 0 0 20px rgba(255, 140, 0, 0.3);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    box-shadow: 0 4px 18px rgba(255, 140, 0, 0.45);
+  }
+}
+
+/* Keyframe: Click Ripple Effect */
+@keyframes rippleEffect {
+  0% {
+    transform: scale(0);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+/* Keyframe: Floating Food 3D Motion */
+@keyframes float3D {
+  0% {
+    transform: translate3d(0, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -18px, 20px) rotate(1.5deg);
+  }
+  100% {
+    transform: translate3d(0, 0px, 0) rotate(0deg);
+  }
+}
+
+/* Keyframe: Secondary Floating Ingredient (Counter-motion) */
+@keyframes floatIngredientA {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate3d(-10px, -22px, 30px) rotate(-6deg) scale(1.04);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes floatIngredientB {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -16px, 15px) rotate(8deg) scale(0.97);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+/* Keyframe: Ambient Breathing Orange Glow */
+@keyframes pulseGlow {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+}
+
+/* Keyframe: Gentle Particle Drifting */
+@keyframes particleDrift {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-40px) scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-80px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Keyframe: Smooth Reveal Entrance */
+@keyframes revealUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Helper animation classes */
+.anim-reveal-1 {
+  animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-reveal-2 {
+  animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.anim-reveal-3 {
+  animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+.anim-reveal-4 {
+  animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+
+.anim-reveal-food {
+  animation: revealScale 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+@keyframes cardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.anim-card-in {
+  animation: cardEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Accessibility: Respect Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
