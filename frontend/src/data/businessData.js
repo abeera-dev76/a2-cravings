@@ -30,6 +30,7 @@ export const businessData = {
   seo: {
     defaultTitle: "A2 CRAVINGS | Homemade Fast Food in Rawalpindi",
     defaultDescription: "Enjoy delicious homemade-style pasta, biryani, loaded fries, stuffed buns and food combos at A2 CRAVINGS in Rawalpindi. Order on WhatsApp.",
+    canonicalUrl: "https://a2-cravings.vercel.app/",
     keywords: [
       "Homemade food in Rawalpindi",
       "Homemade fast food in Rawalpindi",
