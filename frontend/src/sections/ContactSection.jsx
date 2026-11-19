@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLocationDot, faChevronDown, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp, faInstagram } from '@fortawesome/free-brands-svg-icons';
 import { businessData } from '../data/businessData';
 import { menuItems } from '../data/menuData';
 import { getWhatsAppUrl } from '../utils/whatsapp';
@@ -14,6 +17,60 @@ export const ContactSection = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Group menu items into structured categories
+  const foodGroups = useMemo(() => [
+    {
+      label: 'Pastas',
+      items: menuItems.filter((i) => i.category === 'pasta')
+    },
+    {
+      label: 'Buns',
+      items: menuItems.filter((i) => i.category === 'buns')
+    },
+    {
+      label: 'Loaded Fries',
+      items: menuItems.filter((i) => i.category === 'loaded-fries')
+    },
+    {
+      label: 'Biryani',
+      items: menuItems.filter((i) => i.category === 'biryani')
+    },
+    {
+      label: 'Combo Deals & Extras',
+      items: menuItems.filter((i) => i.category === 'combos')
+    }
+  ], []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectFoodItem = (itemValue) => {
+    setFormData((prev) => ({ ...prev, foodItem: itemValue }));
+    if (errors.foodItem) {
+      setErrors((prev) => ({ ...prev, foodItem: '' }));
+    }
+    setIsDropdownOpen(false);
+  };
+
+  const handleDropdownKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsDropdownOpen((prev) => !prev);
+    } else if (e.key === 'Escape') {
+      setIsDropdownOpen(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -113,9 +170,7 @@ export const ContactSection = () => {
                 aria-label="Contact A2 Cravings on WhatsApp"
               >
                 <div className="contact-card-icon-box whatsapp-box" aria-hidden="true">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.5c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1s.9 2.43 1.03 2.6c.13.17 1.77 2.7 4.28 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
-                  </svg>
+                  <FontAwesomeIcon icon={faWhatsapp} />
                 </div>
                 <div className="contact-card-info">
                   <span className="contact-card-label">WhatsApp Orders</span>
@@ -133,11 +188,7 @@ export const ContactSection = () => {
                 aria-label="Visit A2 Cravings on Instagram"
               >
                 <div className="contact-card-icon-box instagram-box" aria-hidden="true">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                  </svg>
+                  <FontAwesomeIcon icon={faInstagram} />
                 </div>
                 <div className="contact-card-info">
                   <span className="contact-card-label">Instagram</span>
@@ -149,10 +200,7 @@ export const ContactSection = () => {
               {/* Location Card */}
               <div className="contact-card location-card anim-card-in">
                 <div className="contact-card-icon-box location-box" aria-hidden="true">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                  </svg>
+                  <FontAwesomeIcon icon={faLocationDot} />
                 </div>
                 <div className="contact-card-info">
                   <span className="contact-card-label">Location</span>
@@ -218,53 +266,75 @@ export const ContactSection = () => {
                     <label htmlFor="food-item" className="form-label">
                       Select Food Item <span className="required-star">*</span>
                     </label>
-                    <div className="select-wrapper">
-                      <select
+                    <div className="custom-select-wrapper" ref={dropdownRef}>
+                      <button
+                        type="button"
                         id="food-item"
-                        name="foodItem"
-                        value={formData.foodItem}
-                        onChange={handleChange}
-                        className={`form-select ${errors.foodItem ? 'has-error' : ''}`}
-                        aria-invalid={errors.foodItem ? 'true' : 'false'}
-                        aria-describedby={errors.foodItem ? 'item-error' : undefined}
+                        className={`custom-select-trigger ${isDropdownOpen ? 'is-open' : ''} ${errors.foodItem ? 'has-error' : ''}`}
+                        onClick={() => setIsDropdownOpen((prev) => !prev)}
+                        onKeyDown={handleDropdownKeyDown}
+                        aria-haspopup="listbox"
+                        aria-expanded={isDropdownOpen}
+                        aria-labelledby="food-item-label"
                       >
-                        <option value="">-- Choose a delicious item --</option>
-                        <optgroup label="Pastas">
-                          {menuItems.filter((i) => i.category === 'pasta').map((item) => (
-                            <option key={item.id} value={`${item.name} (Rs ${item.price})`}>
-                              {item.name} — Rs {item.price}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Buns">
-                          {menuItems.filter((i) => i.category === 'buns').map((item) => (
-                            <option key={item.id} value={`${item.name} (Rs ${item.price})`}>
-                              {item.name} — Rs {item.price}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Loaded Fries">
-                          {menuItems.filter((i) => i.category === 'loaded-fries').map((item) => (
-                            <option key={item.id} value={`${item.name} (Rs ${item.price})`}>
-                              {item.name} — Rs {item.price}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Biryani">
-                          {menuItems.filter((i) => i.category === 'biryani').map((item) => (
-                            <option key={item.id} value={`${item.name} (Rs ${item.price})`}>
-                              {item.name} — Rs {item.price}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Combo Deals">
-                          {menuItems.filter((i) => i.category === 'combos').map((item) => (
-                            <option key={item.id} value={`${item.name} (Rs ${item.price})`}>
-                              {item.name} — Rs {item.price}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
+                        <span className={`trigger-label-text ${!formData.foodItem ? 'is-placeholder' : ''}`}>
+                          {formData.foodItem || '-- Choose a delicious item --'}
+                        </span>
+                        <FontAwesomeIcon
+                          icon={faChevronDown}
+                          className={`custom-select-chevron ${isDropdownOpen ? 'is-rotated' : ''}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+
+                      {/* Hidden input to maintain native form validation and submission compatibility */}
+                      <input type="hidden" name="foodItem" value={formData.foodItem} />
+
+                      {isDropdownOpen && (
+                        <div
+                          className="custom-dropdown-panel"
+                          role="listbox"
+                          aria-labelledby="food-item-label"
+                        >
+                          <div className="custom-dropdown-scroll">
+                            {foodGroups.map((group) => (
+                              <div key={group.label} className="custom-optgroup">
+                                <div className="custom-optgroup-label">{group.label}</div>
+                                <div className="custom-optgroup-items">
+                                  {group.items.map((item) => {
+                                    const itemValue = `${item.name} (Rs ${item.price})`;
+                                    const isSelected = formData.foodItem === itemValue;
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        role="option"
+                                        aria-selected={isSelected}
+                                        tabIndex={0}
+                                        className={`custom-option-item ${isSelected ? 'is-selected' : ''}`}
+                                        onClick={() => handleSelectFoodItem(itemValue)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleSelectFoodItem(itemValue);
+                                          }
+                                        }}
+                                      >
+                                        <div className="option-name-wrap">
+                                          {isSelected && (
+                                            <FontAwesomeIcon icon={faCheck} className="option-check-icon" aria-hidden="true" />
+                                          )}
+                                          <span className="option-item-name">{item.name}</span>
+                                        </div>
+                                        <span className="option-price-tag">Rs {item.price}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {errors.foodItem && <span id="item-error" className="form-error-msg">{errors.foodItem}</span>}
                   </div>
@@ -308,9 +378,7 @@ export const ContactSection = () => {
 
                 {/* Submit Order Button */}
                 <button type="submit" className="form-submit-btn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.5c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1s.9 2.43 1.03 2.6c.13.17 1.77 2.7 4.28 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
-                  </svg>
+                  <FontAwesomeIcon icon={faWhatsapp} className="btn-icon" />
                   <span>Submit Order on WhatsApp</span>
                 </button>
 

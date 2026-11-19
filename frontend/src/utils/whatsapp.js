@@ -6,7 +6,12 @@
  */
 export const getWhatsAppUrl = (phone = "923145027631", message = "") => {
   // Clean phone number: remove spaces, dashes, parentheses and leading '+'
-  const cleanPhone = phone.replace(/[^0-9]/g, "");
+  let cleanPhone = phone.replace(/[^0-9]/g, "");
+
+  // Normalize Pakistani local numbers starting with '0' to international format '92'
+  if (cleanPhone.startsWith("0")) {
+    cleanPhone = "92" + cleanPhone.slice(1);
+  }
   
   if (!message) {
     return `https://wa.me/${cleanPhone}`;

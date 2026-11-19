@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHeart, faChevronDown, faUtensils, faLeaf, faFire, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { Button } from '../components/Button';
 import { businessData } from '../data/businessData';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
@@ -70,7 +73,9 @@ export const Hero = () => {
         <div className="hero-content">
           {/* Small Badge */}
           <div className="hero-badge anim-reveal-1">
-            <span className="badge-heart">❤️</span>
+            <span className="badge-heart">
+              <FontAwesomeIcon icon={faHeart} />
+            </span>
             <span className="badge-text">HOMEMADE WITH LOVE</span>
           </div>
 
@@ -97,11 +102,7 @@ export const Hero = () => {
               size="lg"
               onClick={handleExploreClick}
               ariaLabel="Explore our homemade menu"
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              }
+              icon={<FontAwesomeIcon icon={faChevronDown} />}
             >
               Explore Our Menu
             </Button>
@@ -113,11 +114,7 @@ export const Hero = () => {
               target="_blank"
               rel="noopener noreferrer"
               ariaLabel="Order on WhatsApp with A2 Cravings"
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                </svg>
-              }
+              icon={<FontAwesomeIcon icon={faWhatsapp} />}
             >
               Order on WhatsApp
             </Button>
@@ -126,17 +123,23 @@ export const Hero = () => {
           {/* Small Trust Highlights */}
           <div className="hero-trust-bar anim-reveal-4">
             <div className="trust-item">
-              <span className="trust-icon">✨</span>
+              <span className="trust-icon">
+                <FontAwesomeIcon icon={faUtensils} />
+              </span>
               <span className="trust-label">Freshly Homemade</span>
             </div>
             <div className="trust-divider" aria-hidden="true">•</div>
             <div className="trust-item">
-              <span className="trust-icon">🌿</span>
+              <span className="trust-icon">
+                <FontAwesomeIcon icon={faLeaf} />
+              </span>
               <span className="trust-label">Quality Ingredients</span>
             </div>
             <div className="trust-divider" aria-hidden="true">•</div>
             <div className="trust-item">
-              <span className="trust-icon">👨‍🍳</span>
+              <span className="trust-icon">
+                <FontAwesomeIcon icon={faHeart} />
+              </span>
               <span className="trust-label">Made With Love</span>
             </div>
           </div>
@@ -177,11 +180,17 @@ export const Hero = () => {
 
               {/* Layered Floating Ingredients for 3D Depth */}
               <div className="floating-ingredient ingredient-leaf" aria-hidden="true">
-                <span className="badge-pill">🔥 Fresh & Hot</span>
+                <span className="badge-pill">
+                  <FontAwesomeIcon icon={faFire} style={{ marginRight: '6px', color: '#FF8C00' }} />
+                  Fresh & Hot
+                </span>
               </div>
 
               <div className="floating-ingredient ingredient-badge" aria-hidden="true">
-                <span className="rating-star">✨ Fresh</span>
+                <span className="rating-star">
+                  <FontAwesomeIcon icon={faStar} style={{ marginRight: '5px' }} />
+                  Fresh
+                </span>
                 <span className="rating-text">Chef Special</span>
               </div>
             </div>
