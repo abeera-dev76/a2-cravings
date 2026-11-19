@@ -2,5 +2,5 @@
 User-agent: *
 Allow: /
 
-# Production Note: Uncomment and update with the live production domain once assigned
-# Sitemap: https://<YOUR-PRODUCTION-DOMAIN>/sitemap.xml
+# Sitemap
+Sitemap: https://a2-cravings.vercel.app/sitemap.xml
