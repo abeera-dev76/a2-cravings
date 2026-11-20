@@ -197,6 +197,15 @@ export const Footer = () => {
                   Contact
                 </a>
               </li>
+              <li>
+                <a
+                  href="/track-order"
+                  className="footer-link"
+                  onClick={(e) => handlePageNav(e, '/track-order')}
+                >
+                  Track Order
+                </a>
+              </li>
             </ul>
           </div>
 

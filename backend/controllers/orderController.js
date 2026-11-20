@@ -206,16 +206,21 @@ const maskCustomerDataForPublic = (customer) => {
 const getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
+    const cleanOrderId = String(orderId || '').trim().replace(/^#/, '');
 
-    let order = await Order.findOne({ orderNumber: orderId });
-    if (!order && orderId.match(/^[0-9a-fA-F]{24}$/)) {
-      order = await Order.findById(orderId);
+    // Case-insensitive exact match for order number (e.g. a2-20261120-5109 or A2-20261120-5109)
+    let order = await Order.findOne({
+      orderNumber: new RegExp(`^${cleanOrderId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+    });
+
+    if (!order && cleanOrderId.match(/^[0-9a-fA-F]{24}$/)) {
+      order = await Order.findById(cleanOrderId);
     }
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: `Order not found with id or number: ${orderId}`,
+        message: `Order not found with order number: ${orderId}`,
       });
     }
 

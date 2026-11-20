@@ -7,13 +7,16 @@ import {
   faMinus,
   faTrashCan,
   faArrowRight,
-  faBagShopping
+  faBagShopping,
+  faCircleCheck,
+  faTruckFast
 } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { useCart } from '../context/CartContext';
 import { businessData } from '../data/businessData';
 import { getWhatsAppUrl } from '../utils/whatsapp';
 import { createOrder } from '../services/api';
+import { navigate } from '../utils/navigation';
 
 export const CartDrawer = () => {
   const {
@@ -38,6 +41,7 @@ export const CartDrawer = () => {
 
   const [errors, setErrors] = useState({});
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [placedOrderSuccess, setPlacedOrderSuccess] = useState(null);
 
   // Close drawer on ESC key
   useEffect(() => {
@@ -149,6 +153,16 @@ export const CartDrawer = () => {
 
     const orderUrl = getWhatsAppUrl(businessData.contact.whatsapp, message);
     window.open(orderUrl, '_blank', 'noopener,noreferrer');
+
+    // Display confirmation & tracking option in cart drawer
+    if (orderNumber) {
+      setPlacedOrderSuccess({
+        orderNumber,
+        total: totalPrice,
+        whatsappUrl: orderUrl,
+      });
+      clearCart();
+    }
   };
 
   if (!isCartOpen) return null;
@@ -179,7 +193,60 @@ export const CartDrawer = () => {
 
         {/* Content Body */}
         <div className="cart-drawer-body">
-          {cart.length === 0 ? (
+          {placedOrderSuccess ? (
+            <div className="cart-order-success-view">
+              <div className="cart-success-badge">
+                <FontAwesomeIcon icon={faCircleCheck} />
+              </div>
+              <h3 className="cart-success-title">Order Placed Successfully!</h3>
+              <p className="cart-success-desc">
+                Your order has been recorded in our system and sent to WhatsApp to confirm with our kitchen team.
+              </p>
+
+              <div className="cart-success-order-box">
+                <span className="cart-success-label">Your Tracking Order Number</span>
+                <span className="cart-success-number">#{placedOrderSuccess.orderNumber}</span>
+                <span className="cart-success-hint">Save this number or track anytime</span>
+              </div>
+
+              <div className="cart-success-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary cart-track-order-btn"
+                  onClick={() => {
+                    const ordNum = placedOrderSuccess.orderNumber;
+                    setPlacedOrderSuccess(null);
+                    closeCart();
+                    navigate(`/track-order?orderId=${encodeURIComponent(ordNum)}`);
+                  }}
+                >
+                  <FontAwesomeIcon icon={faTruckFast} />
+                  <span>Track Your Order Live →</span>
+                </button>
+
+                <a
+                  href={placedOrderSuccess.whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cart-reopen-wa-btn"
+                >
+                  <FontAwesomeIcon icon={faWhatsapp} />
+                  <span>Re-open WhatsApp Chat</span>
+                </a>
+
+                <button
+                  type="button"
+                  className="cart-close-success-btn"
+                  onClick={() => {
+                    setPlacedOrderSuccess(null);
+                    closeCart();
+                  }}
+                >
+                  Close & Continue Browsing
+                </button>
+              </div>
+            </div>
+          ) : cart.length === 0 ? (
             <div className="cart-empty-state">
               <div className="cart-empty-icon-wrap">
                 <FontAwesomeIcon icon={faCartShopping} />
@@ -347,7 +414,7 @@ export const CartDrawer = () => {
         </div>
 
         {/* Footer with Subtotal and Primary Checkout Button */}
-        {cart.length > 0 && (
+        {!placedOrderSuccess && cart.length > 0 && (
           <div className="cart-drawer-footer">
             <div className="cart-total-row">
               <span className="cart-total-label">Total Amount:</span>

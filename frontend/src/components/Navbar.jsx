@@ -204,6 +204,16 @@ export const Navbar = () => {
             >
               Contact
             </a>
+            <a
+              href="/track-order"
+              className={`nav-link ${currentPath === '/track-order' || currentPath === '/track' ? 'is-active' : ''}`}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/track-order');
+              }}
+            >
+              Track Order
+            </a>
           </nav>
 
           {/* Right: Actions */}
@@ -362,6 +372,18 @@ export const Navbar = () => {
             }}
           >
             <span>Contact</span>
+            <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
+          </a>
+          <a
+            href="/track-order"
+            className={`mobile-nav-link ${currentPath === '/track-order' || currentPath === '/track' ? 'is-active' : ''}`}
+            onClick={(e) => {
+              e.preventDefault();
+              closeMobileMenu();
+              navigate('/track-order');
+            }}
+          >
+            <span>Track Order</span>
             <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
           </a>
           <a
