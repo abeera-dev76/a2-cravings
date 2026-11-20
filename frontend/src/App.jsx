@@ -7,6 +7,8 @@ import FAQ from './pages/FAQ';
 import ContactUs from './pages/ContactUs';
 import ShippingPolicy from './pages/ShippingPolicy';
 import RefundPolicy from './pages/RefundPolicy';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import { ThemeProvider } from './context/ThemeContext';
 import { CartProvider } from './context/CartContext';
 
@@ -78,6 +80,17 @@ function App() {
       path === '/cancellation-refund-policy'
     ) {
       return <RefundPolicy />;
+    }
+
+    if (path === '/admin/login' || path === '/admin-login') {
+      return <AdminLogin />;
+    }
+    if (
+      path === '/admin' ||
+      path === '/admin/dashboard' ||
+      path === '/admin/orders'
+    ) {
+      return <AdminDashboard />;
     }
 
     return <NotFound />;

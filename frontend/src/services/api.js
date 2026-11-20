@@ -178,6 +178,134 @@ export const fetchOrderById = async (orderId) => {
 };
 
 /**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Admin Authentication & Order Management API Methods
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export const getAdminToken = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('a2_admin_token');
+};
+
+export const getAdminUser = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const user = localStorage.getItem('a2_admin_user');
+    return user ? JSON.parse(user) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const adminLogout = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('a2_admin_token');
+    localStorage.removeItem('a2_admin_user');
+  }
+};
+
+export const adminLogin = async (email, password) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Login failed. Please check your credentials.');
+    }
+
+    if (typeof window !== 'undefined' && data.token) {
+      localStorage.setItem('a2_admin_token', data.token);
+      localStorage.setItem('a2_admin_user', JSON.stringify(data.admin));
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const fetchAdminProfile = async () => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const res = await fetch(`${API_BASE_URL}/admin/me`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    if (res.status === 401) adminLogout();
+    throw new Error(data.message || 'Failed to fetch admin profile');
+  }
+  return data.data;
+};
+
+export const fetchAdminOrders = async ({ page = 1, limit = 20, status = 'all' } = {}) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated. Please log in.');
+
+  let url = `${API_BASE_URL}/admin/orders?page=${page}&limit=${limit}`;
+  if (status && status !== 'all') {
+    url += `&status=${encodeURIComponent(status)}`;
+  }
+
+  const res = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    if (res.status === 401) {
+      adminLogout();
+      throw new Error('Session expired. Please log in again.');
+    }
+    throw new Error(data.message || 'Failed to load orders.');
+  }
+
+  return data;
+};
+
+export const updateAdminOrderStatus = async (orderId, newStatus) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated. Please log in.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/orders/${encodeURIComponent(orderId)}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status: newStatus }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    if (res.status === 401) {
+      adminLogout();
+      throw new Error('Session expired. Please log in again.');
+    }
+    throw new Error(data.message || 'Failed to update order status.');
+  }
+
+  return data;
+};
+
+/**
  * Check backend health status.
  */
 export const checkApiHealth = async () => {
@@ -197,6 +325,13 @@ export default {
   fetchProductById,
   createOrder,
   fetchOrderById,
+  adminLogin,
+  adminLogout,
+  getAdminToken,
+  getAdminUser,
+  fetchAdminProfile,
+  fetchAdminOrders,
+  updateAdminOrderStatus,
   checkApiHealth,
   API_BASE_URL,
 };
