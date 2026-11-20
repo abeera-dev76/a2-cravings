@@ -113,7 +113,7 @@ export const AdminDashboard = () => {
     }
   }, []);
 
-  // 4. Load live products and categories when respective tabs are visited
+  // 4. Load live products and categories from MongoDB
   const loadMenuData = useCallback(async () => {
     setLoadingProducts(true);
     try {
@@ -133,13 +133,8 @@ export const AdminDashboard = () => {
   useEffect(() => {
     loadOrders();
     loadStats();
-  }, [loadOrders, loadStats]);
-
-  useEffect(() => {
-    if (activeTab === 'menu' || activeTab === 'categories') {
-      loadMenuData();
-    }
-  }, [activeTab, loadMenuData]);
+    loadMenuData();
+  }, [loadOrders, loadStats, loadMenuData]);
 
   // Handle Logout
   const handleLogout = () => {
@@ -210,25 +205,26 @@ export const AdminDashboard = () => {
     });
   }, [orders, searchQuery]);
 
-  // Extract unique customers from real orders
+  // Extract unique customers from real MongoDB orders (strictly no hardcoded fallbacks)
   const uniqueCustomers = useMemo(() => {
     const map = new Map();
     allOrdersForStats.forEach((o) => {
-      const phone = o.customer?.phone;
+      const phone = o.customer?.phone?.trim();
       if (!phone) return;
+      const orderSpent = o.status !== 'cancelled' ? (o.totalAmount || 0) : 0;
       if (!map.has(phone)) {
         map.set(phone, {
-          name: o.customer?.name || 'Customer',
+          name: (o.customer?.name || 'N/A').trim(),
           phone: phone,
-          address: o.customer?.address || 'Rawalpindi',
+          address: (o.customer?.address || 'N/A').trim(),
           orderCount: 1,
-          totalSpent: o.totalAmount || 0,
+          totalSpent: orderSpent,
           lastOrderDate: o.createdAt,
         });
       } else {
         const existing = map.get(phone);
         existing.orderCount++;
-        existing.totalSpent += o.totalAmount || 0;
+        existing.totalSpent += orderSpent;
         if (new Date(o.createdAt) > new Date(existing.lastOrderDate)) {
           existing.lastOrderDate = o.createdAt;
         }
@@ -236,6 +232,23 @@ export const AdminDashboard = () => {
     });
     return Array.from(map.values());
   }, [allOrdersForStats]);
+
+  // Actual food categories count in MongoDB (excluding 'all' UI filter tab)
+  const realCategoriesCount = useMemo(() => {
+    return categoriesList.filter((c) => c.slug !== 'all' && c.id !== 'all').length;
+  }, [categoriesList]);
+
+  // Dynamic category filter tabs from actual MongoDB categories
+  const menuCategoryTabs = useMemo(() => {
+    const tabs = [{ slug: 'all', name: 'All Dishes' }];
+    categoriesList.forEach((c) => {
+      const slug = c.slug || c.id;
+      if (slug && slug !== 'all' && !tabs.some((t) => t.slug === slug)) {
+        tabs.push({ slug, name: c.name || slug.replace(/-/g, ' ') });
+      }
+    });
+    return tabs;
+  }, [categoriesList]);
 
   // Filtered products for Menu tab
   const displayedProducts = useMemo(() => {
@@ -250,12 +263,12 @@ export const AdminDashboard = () => {
     return prods;
   }, [productsList, menuFilterCategory, menuSearch]);
 
-  // 8 Organized Navigation Items
+  // 8 Organized Navigation Items (live database counts only, no dummy fallbacks)
   const navItems = [
     { id: 'overview',   label: 'Dashboard Overview', icon: faGaugeHigh },
     { id: 'orders',     label: 'Orders Management',  icon: faReceipt, count: stats.pending },
-    { id: 'menu',       label: 'Menu & Products',    icon: faUtensils, count: productsList.length || 19 },
-    { id: 'categories', label: 'Categories',         icon: faLayerGroup, count: categoriesList.length || 5 },
+    { id: 'menu',       label: 'Menu & Products',    icon: faUtensils, count: productsList.length },
+    { id: 'categories', label: 'Categories',         icon: faLayerGroup, count: realCategoriesCount },
     { id: 'customers',  label: 'Customers',          icon: faUsers, count: uniqueCustomers.length },
     { id: 'website',    label: 'Website Management', icon: faGlobe },
     { id: 'analytics',  label: 'Analytics & Reports',icon: faChartLine },
@@ -523,6 +536,25 @@ export const AdminDashboard = () => {
                   <span className="admin-stat-value">{stats.delivered}</span>
                 </div>
               </div>
+
+              <div
+                className="admin-stat-card"
+                onClick={() => {
+                  setActiveTab('orders');
+                  setStatusFilter('all');
+                }}
+                title="Total revenue from actual valid orders (strictly excludes cancelled orders)"
+              >
+                <div className="admin-stat-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981' }}>
+                  <FontAwesomeIcon icon={faReceipt} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">Valid Revenue</span>
+                  <span className="admin-stat-value" style={{ color: '#10B981', fontSize: '1.25rem' }}>
+                    Rs {stats.totalRevenue.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </section>
 
             {/* Quick Action Shortcuts Banner */}
@@ -572,7 +604,7 @@ export const AdminDashboard = () => {
                 <div>
                   <h3 style={{ margin: '0 0 0.3rem', fontSize: '1.1rem', color: '#FFFFFF' }}>Menu & Catalog</h3>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
-                    View 19 handcrafted dishes across 5 categories
+                    View {productsList.length} handcrafted dishes across {realCategoriesCount} categories
                   </p>
                 </div>
                 <FontAwesomeIcon icon={faArrowRight} style={{ color: '#FF8C00', fontSize: '1.2rem' }} />
@@ -749,7 +781,7 @@ export const AdminDashboard = () => {
                                 })
                               : 'Recent'}
                           </td>
-                          <td>{ord.totalItems || ord.items?.reduce((s, i) => s + i.quantity, 0) || 1} items</td>
+                          <td>{ord.totalItems || ord.items?.reduce((s, i) => s + i.quantity, 0) || (ord.items?.length || 0)} items</td>
                           <td><strong style={{ color: '#FF8C00' }}>Rs {ord.totalAmount?.toLocaleString()}</strong></td>
                           <td>
                             <span className={`admin-badge ${ord.status}`}>
@@ -805,14 +837,14 @@ export const AdminDashboard = () => {
           <div className="admin-view-content">
             <div className="admin-controls-card">
               <div className="admin-filter-tabs">
-                {['all', 'pasta', 'buns', 'loaded-fries', 'biryani', 'combos'].map((c) => (
+                {menuCategoryTabs.map((tab) => (
                   <button
-                    key={c}
+                    key={tab.slug}
                     type="button"
-                    className={`admin-filter-pill ${menuFilterCategory === c ? 'is-active' : ''}`}
-                    onClick={() => setMenuFilterCategory(c)}
+                    className={`admin-filter-pill ${menuFilterCategory === tab.slug ? 'is-active' : ''}`}
+                    onClick={() => setMenuFilterCategory(tab.slug)}
                   >
-                    <span>{c === 'all' ? 'All Dishes' : c.replace('-', ' ')}</span>
+                    <span>{tab.name}</span>
                   </button>
                 ))}
               </div>
@@ -830,62 +862,77 @@ export const AdminDashboard = () => {
             </div>
 
             <div className="admin-table-card">
-              <div className="admin-table-responsive">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Image</th>
-                      <th>Dish Name</th>
-                      <th>Category</th>
-                      <th>Price</th>
-                      <th>Badge</th>
-                      <th>Availability</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayedProducts.map((p) => (
-                      <tr key={p.slug || p._id || p.id}>
-                        <td>
-                          <img
-                            src={p.image || p.fallbackImage}
-                            alt={p.name}
-                            className="admin-product-thumb"
-                            onError={(e) => { e.currentTarget.src = '/images/hero/hero-food.png'; }}
-                          />
-                        </td>
-                        <td>
-                          <strong style={{ color: '#FFFFFF' }}>{p.name}</strong>
-                          <p style={{ margin: '0.2rem 0 0', fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>
-                            {p.description ? p.description.slice(0, 70) + '...' : ''}
-                          </p>
-                        </td>
-                        <td>
-                          <span style={{ textTransform: 'capitalize', color: 'rgba(255,255,255,0.7)' }}>
-                            {p.category}
-                          </span>
-                        </td>
-                        <td>
-                          <strong style={{ color: '#FF8C00' }}>Rs {p.price}</strong>
-                        </td>
-                        <td>
-                          {p.badge ? (
-                            <span style={{ background: 'rgba(255,140,0,0.15)', color: '#FF8C00', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                              {p.badge}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>
-                          )}
-                        </td>
-                        <td>
-                          <span style={{ color: '#10B981', fontWeight: 600, fontSize: '0.82rem' }}>
-                            ● Active (Ready)
-                          </span>
-                        </td>
+              {loadingProducts ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: '#FF8C00' }}>
+                  <FontAwesomeIcon icon={faCircleNotch} spin size="2x" />
+                  <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.7)' }}>
+                    Loading products from MongoDB...
+                  </p>
+                </div>
+              ) : displayedProducts.length === 0 ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                  <FontAwesomeIcon icon={faUtensils} size="2x" style={{ marginBottom: '1rem' }} />
+                  <h3>No Dishes Found</h3>
+                  <p>No products found in the database matching your criteria.</p>
+                </div>
+              ) : (
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Image</th>
+                        <th>Dish Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Badge</th>
+                        <th>Availability</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {displayedProducts.map((p) => (
+                        <tr key={p.slug || p._id || p.id}>
+                          <td>
+                            <img
+                              src={p.image || p.fallbackImage}
+                              alt={p.name}
+                              className="admin-product-thumb"
+                              onError={(e) => { e.currentTarget.src = '/images/hero/hero-food.png'; }}
+                            />
+                          </td>
+                          <td>
+                            <strong style={{ color: '#FFFFFF' }}>{p.name}</strong>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>
+                              {p.description ? p.description.slice(0, 70) + '...' : ''}
+                            </p>
+                          </td>
+                          <td>
+                            <span style={{ textTransform: 'capitalize', color: 'rgba(255,255,255,0.7)' }}>
+                              {p.category}
+                            </span>
+                          </td>
+                          <td>
+                            <strong style={{ color: '#FF8C00' }}>Rs {p.price}</strong>
+                          </td>
+                          <td>
+                            {p.badge ? (
+                              <span style={{ background: 'rgba(255,140,0,0.15)', color: '#FF8C00', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                {p.badge}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            <span style={{ color: '#10B981', fontWeight: 600, fontSize: '0.82rem' }}>
+                              ● Active (Ready)
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -901,30 +948,38 @@ export const AdminDashboard = () => {
                 </p>
               </div>
 
-              <div className="admin-table-responsive">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Display Name</th>
-                      <th>Slug Identifier</th>
-                      <th>Display Order</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categoriesList.filter((c) => c.slug || c.id !== 'all').map((cat, idx) => (
-                      <tr key={cat.slug || cat._id || idx}>
-                        <td><strong style={{ color: '#FFFFFF' }}>{cat.name}</strong></td>
-                        <td><code style={{ color: '#FF8C00' }}>{cat.slug || cat.id}</code></td>
-                        <td>Priority #{cat.order || idx + 1}</td>
-                        <td>
-                          <span style={{ color: '#10B981', fontWeight: 600 }}>● Active</span>
-                        </td>
+              {realCategoriesCount === 0 ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                  <FontAwesomeIcon icon={faLayerGroup} size="2x" style={{ marginBottom: '1rem' }} />
+                  <h3>No Categories Found</h3>
+                  <p>No food categories configured in MongoDB database.</p>
+                </div>
+              ) : (
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Display Name</th>
+                        <th>Slug Identifier</th>
+                        <th>Display Order</th>
+                        <th>Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {categoriesList.filter((c) => c.slug || c.id !== 'all').map((cat, idx) => (
+                        <tr key={cat.slug || cat._id || idx}>
+                          <td><strong style={{ color: '#FFFFFF' }}>{cat.name}</strong></td>
+                          <td><code style={{ color: '#FF8C00' }}>{cat.slug || cat.id}</code></td>
+                          <td>Priority #{cat.order || idx + 1}</td>
+                          <td>
+                            <span style={{ color: '#10B981', fontWeight: 600 }}>● Active</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
