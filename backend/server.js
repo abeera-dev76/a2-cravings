@@ -32,9 +32,11 @@ app.get('/api/health', (req, res) => {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
 
 // ─── 404 Handler for unknown routes ──────────────────────────────────────────
 app.use((req, res) => {

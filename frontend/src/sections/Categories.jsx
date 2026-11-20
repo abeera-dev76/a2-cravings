@@ -18,7 +18,7 @@ const categoryIcons = {
   combos: faLayerGroup
 };
 
-export const Categories = ({ categories, activeCategory, onSelectCategory }) => {
+export const Categories = ({ categories = [], activeCategory, onSelectCategory }) => {
   return (
     <nav className="menu-categories-nav" aria-label="Menu Category Filter">
       <div className="menu-categories-list">

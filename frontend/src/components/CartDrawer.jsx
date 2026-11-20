@@ -13,6 +13,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { useCart } from '../context/CartContext';
 import { businessData } from '../data/businessData';
 import { getWhatsAppUrl } from '../utils/whatsapp';
+import { createOrder } from '../services/api';
 
 export const CartDrawer = () => {
   const {
@@ -95,14 +96,41 @@ export const CartDrawer = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleCheckoutSubmit = (e) => {
+  const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
     if (!validateCheckout()) {
       return;
     }
 
+    let orderNumber = null;
+    try {
+      // Record order in MongoDB backend
+      const orderPayload = {
+        customer: {
+          name: checkoutData.name.trim(),
+          phone: checkoutData.phone.trim(),
+          address: checkoutData.address.trim(),
+          notes: (checkoutData.instructions || '').trim(),
+        },
+        items: cart.map((item) => ({
+          productId: item.id || item.slug,
+          quantity: item.quantity,
+        })),
+        source: 'whatsapp',
+      };
+      const result = await createOrder(orderPayload);
+      if (result && result.data && result.data.orderNumber) {
+        orderNumber = result.data.orderNumber;
+      }
+    } catch (apiErr) {
+      console.warn('Backend order recording skipped or failed, continuing with direct WhatsApp checkout:', apiErr.message);
+    }
+
     // Build structured multi-item WhatsApp order message
     let message = `Assalam o Alaikum A2 Cravings! I would like to place an order:\n\n`;
+    if (orderNumber) {
+      message += `📋 *ORDER NUMBER:* #${orderNumber}\n\n`;
+    }
     message += `🛒 *ORDER ITEMS:*\n`;
     cart.forEach((item) => {
       message += `• ${item.quantity}x ${item.name} (Rs ${item.price} each) = Rs ${item.price * item.quantity}\n`;
