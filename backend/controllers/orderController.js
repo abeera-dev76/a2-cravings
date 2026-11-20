@@ -174,8 +174,34 @@ const createOrder = async (req, res) => {
 };
 
 /**
+ * Helper to mask sensitive customer data for public order tracking.
+ * Protects phone number and complete street address from unauthorized scrapers.
+ */
+const maskCustomerDataForPublic = (customer) => {
+  if (!customer) return {};
+  const phone = String(customer.phone || '').trim();
+  const maskedPhone =
+    phone.length >= 6
+      ? `${phone.slice(0, 4)}*****${phone.slice(-2)}`
+      : '*******';
+
+  const nameParts = String(customer.name || '').trim().split(' ');
+  const maskedName =
+    nameParts.length > 1
+      ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
+      : customer.name;
+
+  return {
+    name: maskedName,
+    phone: maskedPhone,
+  };
+};
+
+/**
  * GET /api/orders/:orderId
- * Retrieves a single order safely by orderNumber or MongoDB _id.
+ * Safe Public Tracking: Retrieves order status for customer tracking.
+ * Automatically masks personal phone and street address for privacy protection.
+ * Authenticated admins use GET /api/admin/orders for full unmasked details.
  */
 const getOrderById = async (req, res) => {
   try {
@@ -193,9 +219,21 @@ const getOrderById = async (req, res) => {
       });
     }
 
+    // Safe public response for customer tracking
+    const safeOrder = {
+      _id: order._id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      items: order.items,
+      totalAmount: order.totalAmount,
+      totalItems: order.totalItems,
+      createdAt: order.createdAt,
+      customer: maskCustomerDataForPublic(order.customer),
+    };
+
     res.status(200).json({
       success: true,
-      data: order,
+      data: safeOrder,
     });
   } catch (error) {
     console.error('❌ Error fetching order:', error);
