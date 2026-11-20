@@ -172,6 +172,63 @@
   animation: cardEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ==========================================================================
+   INTERSECTION OBSERVER SCROLL REVEAL ANIMATIONS
+   Progressive enhancement: If JS is off or before observation, elements remain visible.
+   Only when .has-scroll-reveal is present on root do unrevealed elements hide and animate.
+   ========================================================================== */
+
+/* Base unrevealed state */
+.has-scroll-reveal .reveal-on-scroll {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+  transition:
+    opacity 0.72s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+/* Scale variant for imagery and hero visual / featured cards */
+.has-scroll-reveal .reveal-on-scroll.reveal-scale {
+  transform: scale(0.95) translate3d(0, 20px, 0);
+  transition-duration: 0.85s;
+}
+
+/* Subtle fade only (no vertical translation, good for background bars) */
+.has-scroll-reveal .reveal-on-scroll.reveal-fade {
+  transform: none;
+  transition-duration: 0.65s;
+}
+
+/* Slide in from left */
+.has-scroll-reveal .reveal-on-scroll.reveal-slide-left {
+  transform: translate3d(-26px, 0, 0);
+}
+
+/* Slide in from right */
+.has-scroll-reveal .reveal-on-scroll.reveal-slide-right {
+  transform: translate3d(26px, 0, 0);
+}
+
+/* Revealed state — smooth spring entrance */
+.has-scroll-reveal .reveal-on-scroll.is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+/* Clear will-change after transition completes to preserve mobile GPU memory */
+.has-scroll-reveal .reveal-on-scroll.is-revealed:not(:hover) {
+  will-change: auto;
+}
+
+/* Stagger delay utility classes */
+.has-scroll-reveal .reveal-delay-1 { transition-delay: 0.08s; }
+.has-scroll-reveal .reveal-delay-2 { transition-delay: 0.16s; }
+.has-scroll-reveal .reveal-delay-3 { transition-delay: 0.24s; }
+.has-scroll-reveal .reveal-delay-4 { transition-delay: 0.32s; }
+.has-scroll-reveal .reveal-delay-5 { transition-delay: 0.40s; }
+.has-scroll-reveal .reveal-delay-6 { transition-delay: 0.48s; }
+
 /* Accessibility: Respect Reduced Motion Preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -179,5 +236,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .has-scroll-reveal .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }

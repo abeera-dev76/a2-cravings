@@ -1,13 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
-import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
-import { businessData } from '../data/businessData';
+import { faCartPlus, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { useCart } from '../context/CartContext';
 
 export const FoodCard = ({ item }) => {
   const cardRef = useRef(null);
   const [transformStyle, setTransformStyle] = useState('');
   const [isHovered, setIsHovered] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+  const { addToCart } = useCart();
 
   // 3D Tilt calculation on mouse move
   const handleMouseMove = (e) => {
@@ -18,8 +19,8 @@ export const FoodCard = ({ item }) => {
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    const rotateX = ((y - centerY) / centerY) * -9;
-    const rotateY = ((x - centerX) / centerX) * 9;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
 
     setTransformStyle(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.02)`);
   };
@@ -33,11 +34,14 @@ export const FoodCard = ({ item }) => {
     setTransformStyle('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1)');
   };
 
-  // Prefilled WhatsApp order URL for this specific food item
-  const whatsappUrl = getWhatsAppUrl(
-    businessData.contact.whatsapp,
-    WHATSAPP_MESSAGES.itemOrder(item.name, item.price)
-  );
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    addToCart(item, 1);
+    setIsAdded(true);
+    setTimeout(() => {
+      setIsAdded(false);
+    }, 1800);
+  };
 
   return (
     <article
@@ -52,22 +56,26 @@ export const FoodCard = ({ item }) => {
       {/* Food Image Container */}
       <div className="food-card-image-wrap">
         {item.badge && <span className="food-card-badge">{item.badge}</span>}
-        <img
-          src={item.image}
-          alt={item.alt || `${item.name} - A2 Cravings Rawalpindi`}
-          className="food-card-image"
-          loading="lazy"
-          width="400"
-          height="300"
-          onError={(e) => {
-            // Graceful tiered fallback: specific fallback image -> hero food banner
-            if (item.fallbackImage && e.currentTarget.src !== item.fallbackImage) {
-              e.currentTarget.src = item.fallbackImage;
-            } else {
-              e.currentTarget.src = '/images/hero/hero-food.png';
-            }
-          }}
-        />
+        <picture>
+          {item.image && item.image.endsWith('.webp') && (
+            <source srcSet={item.image} type="image/webp" />
+          )}
+          <img
+            src={item.fallbackImage || item.image}
+            alt={item.alt || `${item.name} - A2 Cravings Rawalpindi`}
+            className="food-card-image"
+            loading="lazy"
+            width="400"
+            height="300"
+            onError={(e) => {
+              if (item.fallbackImage && e.currentTarget.src !== item.fallbackImage) {
+                e.currentTarget.src = item.fallbackImage;
+              } else {
+                e.currentTarget.src = '/images/hero/hero-food.png';
+              }
+            }}
+          />
+        </picture>
         <div className="food-card-image-gradient" aria-hidden="true" />
       </div>
 
@@ -80,18 +88,17 @@ export const FoodCard = ({ item }) => {
 
         <p className="food-card-description">{item.description}</p>
 
-        {/* Card CTA: Order on WhatsApp */}
+        {/* Card Actions: Add to Cart */}
         <div className="food-card-footer">
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="food-card-order-btn"
-            aria-label={`Order ${item.name} for Rs ${item.price} on WhatsApp`}
+          <button
+            type="button"
+            className={`food-card-cart-btn ${isAdded ? 'is-added' : ''}`}
+            onClick={handleAddToCart}
+            aria-label={`Add ${item.name} to cart`}
           >
-            <FontAwesomeIcon icon={faWhatsapp} />
-            <span>Order on WhatsApp</span>
-          </a>
+            <FontAwesomeIcon icon={isAdded ? faCheck : faCartPlus} className="btn-icon" />
+            <span>{isAdded ? 'Added!' : 'Add to Cart'}</span>
+          </button>
         </div>
       </div>
     </article>

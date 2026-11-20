@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSun, faMoon, faArrowRight, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faSun, faMoon, faArrowRight, faXmark, faCartShopping } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { businessData } from '../data/businessData';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
 import { useTheme } from '../context/ThemeContext';
+import { navigate } from '../utils/navigation';
+import { useCart } from '../context/CartContext';
 
 export const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
+  const { totalCount, openCart } = useCart();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
@@ -72,6 +75,14 @@ export const Navbar = () => {
     e.preventDefault();
     closeMobileMenu();
 
+    const isHome = typeof window !== 'undefined' && 
+      (window.location.pathname === '/' || window.location.pathname === '' || window.location.pathname === '/index.html');
+
+    if (!isHome) {
+      navigate('/', targetId === 'home' ? '' : targetId);
+      return;
+    }
+
     if (targetId === 'home') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setActiveSection('home');
@@ -91,6 +102,24 @@ export const Navbar = () => {
       setActiveSection(targetId);
     }
   };
+
+  const [currentPath, setCurrentPath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('a2:route-change', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('a2:route-change', handleRouteChange);
+    };
+  }, []);
+
+  const isHome = currentPath === '/' || currentPath === '' || currentPath === '/index.html';
 
   const handleButtonClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -139,36 +168,39 @@ export const Navbar = () => {
           <nav className="nav-links" aria-label="Main Navigation">
             <a
               href="#home"
-              className={`nav-link ${activeSection === 'home' ? 'is-active' : ''}`}
+              className={`nav-link ${isHome && activeSection === 'home' ? 'is-active' : ''}`}
               onClick={(e) => scrollToSection(e, 'home')}
             >
               Home
             </a>
             <a
               href="#menu"
-              className={`nav-link ${activeSection === 'menu' ? 'is-active' : ''}`}
+              className={`nav-link ${isHome && activeSection === 'menu' ? 'is-active' : ''}`}
               onClick={(e) => scrollToSection(e, 'menu')}
             >
               Menu
             </a>
             <a
               href="#combos"
-              className={`nav-link ${activeSection === 'combos' ? 'is-active' : ''}`}
+              className={`nav-link ${isHome && activeSection === 'combos' ? 'is-active' : ''}`}
               onClick={(e) => scrollToSection(e, 'combos')}
             >
               Combos
             </a>
             <a
               href="#about"
-              className={`nav-link ${activeSection === 'about' ? 'is-active' : ''}`}
+              className={`nav-link ${isHome && activeSection === 'about' ? 'is-active' : ''}`}
               onClick={(e) => scrollToSection(e, 'about')}
             >
-              Our Story
+              About Us
             </a>
             <a
-              href="#contact"
-              className={`nav-link ${activeSection === 'contact' ? 'is-active' : ''}`}
-              onClick={(e) => scrollToSection(e, 'contact')}
+              href="/contact-us"
+              className={`nav-link ${currentPath === '/contact-us' || currentPath === '/contact' ? 'is-active' : ''}`}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/contact-us');
+              }}
             >
               Contact
             </a>
@@ -185,6 +217,20 @@ export const Navbar = () => {
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               <FontAwesomeIcon icon={theme === 'dark' ? faSun : faMoon} />
+            </button>
+
+            {/* Cart Icon Button */}
+            <button
+              type="button"
+              className="nav-cart-btn"
+              onClick={openCart}
+              aria-label={`Open cart${totalCount > 0 ? ` (${totalCount} items)` : ''}`}
+              title="View Cart"
+            >
+              <FontAwesomeIcon icon={faCartShopping} />
+              {totalCount > 0 && (
+                <span className="nav-cart-badge" aria-hidden="true">{totalCount > 9 ? '9+' : totalCount}</span>
+              )}
             </button>
 
             <a
@@ -276,7 +322,7 @@ export const Navbar = () => {
         <nav className="mobile-nav-links" aria-label="Mobile Links">
           <a
             href="#home"
-            className={`mobile-nav-link ${activeSection === 'home' ? 'is-active' : ''}`}
+            className={`mobile-nav-link ${isHome && activeSection === 'home' ? 'is-active' : ''}`}
             onClick={(e) => scrollToSection(e, 'home')}
           >
             <span>Home</span>
@@ -284,7 +330,7 @@ export const Navbar = () => {
           </a>
           <a
             href="#menu"
-            className={`mobile-nav-link ${activeSection === 'menu' ? 'is-active' : ''}`}
+            className={`mobile-nav-link ${isHome && activeSection === 'menu' ? 'is-active' : ''}`}
             onClick={(e) => scrollToSection(e, 'menu')}
           >
             <span>Menu</span>
@@ -292,7 +338,7 @@ export const Navbar = () => {
           </a>
           <a
             href="#combos"
-            className={`mobile-nav-link ${activeSection === 'combos' ? 'is-active' : ''}`}
+            className={`mobile-nav-link ${isHome && activeSection === 'combos' ? 'is-active' : ''}`}
             onClick={(e) => scrollToSection(e, 'combos')}
           >
             <span>Combos</span>
@@ -300,18 +346,34 @@ export const Navbar = () => {
           </a>
           <a
             href="#about"
-            className={`mobile-nav-link ${activeSection === 'about' ? 'is-active' : ''}`}
+            className={`mobile-nav-link ${isHome && activeSection === 'about' ? 'is-active' : ''}`}
             onClick={(e) => scrollToSection(e, 'about')}
           >
-            <span>Our Story</span>
+            <span>About Us</span>
             <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
           </a>
           <a
-            href="#contact"
-            className={`mobile-nav-link ${activeSection === 'contact' ? 'is-active' : ''}`}
-            onClick={(e) => scrollToSection(e, 'contact')}
+            href="/contact-us"
+            className={`mobile-nav-link ${currentPath === '/contact-us' || currentPath === '/contact' ? 'is-active' : ''}`}
+            onClick={(e) => {
+              e.preventDefault();
+              closeMobileMenu();
+              navigate('/contact-us');
+            }}
           >
             <span>Contact</span>
+            <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
+          </a>
+          <a
+            href="/faq"
+            className="mobile-nav-link"
+            onClick={(e) => {
+              e.preventDefault();
+              closeMobileMenu();
+              navigate('/faq');
+            }}
+          >
+            <span>FAQs & Help</span>
             <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
           </a>
         </nav>

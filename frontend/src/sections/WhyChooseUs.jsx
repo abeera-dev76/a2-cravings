@@ -93,11 +93,11 @@ export const WhyChooseUs = () => {
       <div className="container">
         {/* Section Heading */}
         <div className="section-header text-center">
-          <span className="section-badge">WHY A2 CRAVINGS?</span>
-          <h2 id="why-choose-heading" className="section-title">
+          <span className="section-badge reveal-on-scroll">WHY A2 CRAVINGS?</span>
+          <h2 id="why-choose-heading" className="section-title reveal-on-scroll reveal-delay-1">
             Why You'll Love <span className="accent-gradient">Every Bite</span>
           </h2>
-          <p className="section-description">
+          <p className="section-description reveal-on-scroll reveal-delay-2">
             Great taste, thoughtful preparation and a satisfying food experience. 
             Rawalpindi's trusted homemade kitchen bringing flavor right to your door.
           </p>
@@ -105,8 +105,12 @@ export const WhyChooseUs = () => {
 
         {/* 4 Feature Cards Grid */}
         <div className="why-features-grid">
-          {features.map((feat) => (
-            <TiltCard key={feat.id} className="why-feature-card anim-card-in">
+          {features.map((feat, idx) => (
+            <TiltCard
+              key={feat.id}
+              className="why-feature-card reveal-on-scroll anim-card-in"
+              style={{ transitionDelay: `${idx * 0.09}s` }}
+            >
               {/* Animated Floating Icon Box */}
               <div className="why-icon-stage">
                 <div className="why-icon-glow" aria-hidden="true" />
@@ -126,7 +130,7 @@ export const WhyChooseUs = () => {
         </div>
 
         {/* Section Action CTAs */}
-        <div className="why-us-actions text-center">
+        <div className="why-us-actions text-center reveal-on-scroll reveal-delay-2">
           <Button
             variant="primary"
             size="md"

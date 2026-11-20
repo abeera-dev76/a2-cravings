@@ -8,42 +8,49 @@ export const menuCategories = [
 ];
 
 export const menuItems = [
-  // --- PASTA ---
-  {
-    id: 'chicken-cheese-creamy-pasta',
-    name: 'Chicken Cheese Creamy Pasta',
-    category: 'pasta',
-    price: 600,
-    description: 'Velvety cream sauce loaded with tender chicken chunks, topped with melted mozzarella cheese.',
-    image: '/images/pasta/chicken-cheese-creamy-pasta.png',
-    alt: 'Chicken Cheese Creamy Pasta - Homemade fast food in Rawalpindi by A2 Cravings'
-  },
+  // --- PASTA (Elbow Macaroni Shape in Aluminum Foil Trays) ---
   {
     id: 'chicken-creamy-pasta',
     name: 'Chicken Creamy Pasta',
     category: 'pasta',
     price: 500,
-    description: 'Rich, comforting white creamy pasta tossed with juicy seasoned chicken and Italian herbs.',
-    image: '/images/pasta/chicken-creamy-pasta.png',
-    alt: 'Creamy Chicken Pasta - A2 Cravings homemade food in Rawalpindi'
+    badge: 'Popular',
+    description: 'Rich, comforting white creamy sauce tossed with juicy seasoned chicken chunks, Italian herbs, and elbow macaroni served hot in an aluminum foil tray.',
+    image: '/images/pasta/chicken-creamy-pasta.webp',
+    fallbackImage: '/images/pasta/chicken-creamy-pasta.png',
+    alt: 'Chicken Creamy Pasta with elbow macaroni in aluminum foil tray - A2 Cravings Rawalpindi'
+  },
+  {
+    id: 'chicken-cheese-creamy-pasta',
+    name: 'Chicken Cheese Creamy Pasta',
+    category: 'pasta',
+    price: 600,
+    badge: 'Chef Special',
+    description: 'Velvety cream sauce loaded with tender chicken chunks, smothered in golden melted mozzarella cheese over elbow macaroni in an aluminum foil tray.',
+    image: '/images/pasta/chicken-cheese-creamy-pasta.webp',
+    fallbackImage: '/images/pasta/chicken-cheese-creamy-pasta.png',
+    alt: 'Chicken Cheese Creamy Pasta with elbow macaroni in aluminum foil tray - A2 Cravings Rawalpindi'
   },
   {
     id: 'spicy-chicken-cheese-pasta',
     name: 'Spicy Chicken Cheese Pasta',
     category: 'pasta',
     price: 600,
-    description: 'A zesty kick of spicy seasoned chicken, molten cheese, and rich creamy pasta sauce.',
-    image: '/images/pasta/spicy-chicken-cheese-pasta.png',
-    alt: 'Spicy Chicken Cheese Pasta - Fresh homemade pasta Rawalpindi'
+    badge: 'Hot & Spicy',
+    description: 'A zesty kick of spicy seasoned chicken, orange-red spicy sauce, chili flakes, and molten cheese over elbow macaroni baked in an aluminum foil tray.',
+    image: '/images/pasta/spicy-chicken-cheese-pasta.webp',
+    fallbackImage: '/images/pasta/spicy-chicken-cheese-pasta.png',
+    alt: 'Spicy Chicken Cheese Pasta with elbow macaroni, chili flakes and chicken in aluminum foil tray - A2 Cravings Rawalpindi'
   },
   {
     id: 'white-sauce-pasta',
     name: 'White Sauce Pasta',
     category: 'pasta',
     price: 500,
-    description: 'Classic velvety garlic-infused béchamel sauce pasta cooked to al dente perfection.',
-    image: '/images/pasta/white-sauce-pasta.png',
-    alt: 'White Sauce Pasta - Delicious homemade food Rawalpindi'
+    description: 'Classic creamy white Alfredo sauce with grilled chicken chunks, melted cheese, black pepper and herbs over elbow macaroni in an aluminum foil tray.',
+    image: '/images/pasta/white-sauce-pasta.webp',
+    fallbackImage: '/images/pasta/white-sauce-pasta.png',
+    alt: 'White Sauce Pasta with elbow macaroni, chicken and cheese in aluminum foil tray - A2 Cravings Rawalpindi'
   },
   {
     id: 'a2-special-pasta',

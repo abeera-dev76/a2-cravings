@@ -7,8 +7,15 @@ import AboutSection from '../sections/AboutSection';
 import WhyChooseUs from '../sections/WhyChooseUs';
 import ContactSection from '../sections/ContactSection';
 import Footer from '../components/Footer';
+import CartDrawer from '../components/CartDrawer';
+import { useScrollReveal } from '../utils/useScrollReveal';
+import { useCart } from '../context/CartContext';
 
 export const Home = () => {
+  // Initialize IntersectionObserver scroll-reveal across all sections
+  useScrollReveal();
+  const { notification } = useCart();
+
   return (
     <div className="a2-page-wrapper">
       <Navbar />
@@ -35,6 +42,16 @@ export const Home = () => {
 
       {/* STEP 10: Luxury Restaurant Footer */}
       <Footer />
+
+      {/* Cart Drawer (slides in from right) */}
+      <CartDrawer />
+
+      {/* Cart Add Toast Notification */}
+      {notification && (
+        <div className="cart-toast" role="status" aria-live="polite">
+          {notification}
+        </div>
+      )}
     </div>
   );
 };

@@ -72,7 +72,7 @@ export const AboutSection = () => {
       <div className="container">
         <div className="about-layout-grid">
           {/* Left Column: Food Photography Visual */}
-          <div className="about-visual-col">
+          <div className="about-visual-col reveal-on-scroll reveal-scale">
             <div
               ref={imageCardRef}
               className="about-image-card anim-reveal-food"
@@ -112,14 +112,14 @@ export const AboutSection = () => {
           {/* Right Column: Storytelling & Highlights */}
           <div className="about-content-col">
             <div className="about-header">
-              <span className="section-badge">OUR STORY</span>
-              <h2 id="about-heading" className="about-main-title">
+              <span className="section-badge reveal-on-scroll">ABOUT US</span>
+              <h2 id="about-heading" className="about-main-title reveal-on-scroll reveal-delay-1">
                 Made With Love, <span className="accent-gradient">Served With Flavor.</span>
               </h2>
             </div>
 
             {/* Brand Description */}
-            <div className="about-story-text">
+            <div className="about-story-text reveal-on-scroll reveal-delay-2">
               <p>
                 At <strong>A2 CRAVINGS</strong>, we believe great food brings people together. 
                 Our passion is serving delicious homemade-style food, prepared with care and full of flavor. 
@@ -134,8 +134,12 @@ export const AboutSection = () => {
 
             {/* Brand Highlights Cards */}
             <div className="about-highlights-grid">
-              {highlights.map((h) => (
-                <div key={h.id} className="about-highlight-card">
+              {highlights.map((h, idx) => (
+                <div
+                  key={h.id}
+                  className="about-highlight-card reveal-on-scroll"
+                  style={{ transitionDelay: `${idx * 0.1}s` }}
+                >
                   <div className="highlight-icon-box" aria-hidden="true">
                     {h.icon}
                   </div>
@@ -147,8 +151,24 @@ export const AboutSection = () => {
               ))}
             </div>
 
+            {/* Rawalpindi / Proudly Local & Kitchen Stats Box */}
+            <div className="about-stats-row reveal-on-scroll">
+              <div className="about-stat-box">
+                <span className="stat-box-num">100%</span>
+                <span className="stat-box-lbl">Fresh To Order</span>
+              </div>
+              <div className="about-stat-box">
+                <span className="stat-box-num">4.9★</span>
+                <span className="stat-box-lbl">Customer Rated</span>
+              </div>
+              <div className="about-stat-box about-stat-box-local">
+                <span className="stat-box-num stat-box-city">{businessData.location.city}</span>
+                <span className="stat-box-lbl">Proudly Local</span>
+              </div>
+            </div>
+
             {/* CTA Buttons */}
-            <div className="about-actions-row">
+            <div className="about-actions-row reveal-on-scroll reveal-delay-3">
               <Button
                 variant="primary"
                 size="md"

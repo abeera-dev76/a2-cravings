@@ -11,6 +11,7 @@ export const ContactSection = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    address: '',
     foodItem: '',
     quantity: '1',
     instructions: ''
@@ -94,6 +95,12 @@ export const ContactSection = () => {
       newErrors.phone = 'Please enter a valid phone number (e.g., 03145027631).';
     }
 
+    if (!formData.address.trim()) {
+      newErrors.address = 'Please enter your complete delivery address.';
+    } else if (formData.address.trim().length < 10) {
+      newErrors.address = 'Please provide a more detailed address (house, street, area, city).';
+    }
+
     if (!formData.foodItem) {
       newErrors.foodItem = 'Please select a food item or deal from our menu.';
     }
@@ -117,6 +124,7 @@ export const ContactSection = () => {
     let message = `Assalam o Alaikum A2 Cravings! I would like to place an order:\n\n`;
     message += `👤 *Customer Name:* ${formData.name.trim()}\n`;
     message += `📞 *Phone Number:* ${formData.phone.trim()}\n`;
+    message += `📍 *Delivery Address:* ${formData.address.trim()}\n`;
     message += `🍽️ *Selected Item:* ${formData.foodItem}\n`;
     message += `🔢 *Quantity:* ${formData.quantity}\n`;
 
@@ -141,11 +149,11 @@ export const ContactSection = () => {
       <div className="container">
         {/* Section Header */}
         <div className="section-header text-center">
-          <span className="section-badge">GET IN TOUCH</span>
-          <h2 id="contact-heading" className="section-title">
+          <span className="section-badge reveal-on-scroll">GET IN TOUCH</span>
+          <h2 id="contact-heading" className="section-title reveal-on-scroll reveal-delay-1">
             Let's Talk About <span className="accent-gradient">Your Cravings</span>
           </h2>
-          <p className="section-description">
+          <p className="section-description reveal-on-scroll reveal-delay-2">
             Have a question or want to enjoy something delicious? Get in touch with A2 CRAVINGS.
             Fresh homemade food in Rawalpindi prepared with love and authentic flavors.
           </p>
@@ -155,8 +163,8 @@ export const ContactSection = () => {
         <div className="contact-layout-grid">
           {/* Left Column: Contact Cards */}
           <div className="contact-info-col">
-            <h3 className="contact-col-title">Direct Channels</h3>
-            <p className="contact-col-subtitle">
+            <h3 className="contact-col-title reveal-on-scroll">Direct Channels</h3>
+            <p className="contact-col-subtitle reveal-on-scroll reveal-delay-1">
               Reach out directly for orders, questions, or updates. We are always happy to help!
             </p>
 
@@ -166,7 +174,7 @@ export const ContactSection = () => {
                 href={whatsappDirectUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="contact-card anim-card-in"
+                className="contact-card reveal-on-scroll anim-card-in"
                 aria-label="Contact A2 Cravings on WhatsApp"
               >
                 <div className="contact-card-icon-box whatsapp-box" aria-hidden="true">
@@ -184,7 +192,8 @@ export const ContactSection = () => {
                 href={businessData.contact.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="contact-card anim-card-in"
+                className="contact-card reveal-on-scroll anim-card-in"
+                style={{ transitionDelay: '0.1s' }}
                 aria-label="Visit A2 Cravings on Instagram"
               >
                 <div className="contact-card-icon-box instagram-box" aria-hidden="true">
@@ -198,7 +207,10 @@ export const ContactSection = () => {
               </a>
 
               {/* Location Card */}
-              <div className="contact-card location-card anim-card-in">
+              <div
+                className="contact-card location-card reveal-on-scroll anim-card-in"
+                style={{ transitionDelay: '0.2s' }}
+              >
                 <div className="contact-card-icon-box location-box" aria-hidden="true">
                   <FontAwesomeIcon icon={faLocationDot} />
                 </div>
@@ -213,7 +225,7 @@ export const ContactSection = () => {
 
           {/* Right Column: Quick Order Form */}
           <div className="contact-form-col">
-            <div className="contact-form-container anim-card-in">
+            <div className="contact-form-container reveal-on-scroll reveal-scale reveal-delay-1">
               <div className="form-header">
                 <h3 className="form-title">Quick WhatsApp Order</h3>
                 <p className="form-subtitle">
@@ -258,6 +270,25 @@ export const ContactSection = () => {
                     aria-describedby={errors.phone ? 'phone-error' : undefined}
                   />
                   {errors.phone && <span id="phone-error" className="form-error-msg">{errors.phone}</span>}
+                </div>
+
+                {/* Delivery Address */}
+                <div className="form-group">
+                  <label htmlFor="delivery-address" className="form-label">
+                    Delivery Address <span className="required-star">*</span>
+                  </label>
+                  <textarea
+                    id="delivery-address"
+                    name="address"
+                    rows="3"
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Enter your complete delivery address, house number, street, area and city..."
+                    className={`form-textarea ${errors.address ? 'has-error' : ''}`}
+                    aria-invalid={errors.address ? 'true' : 'false'}
+                    aria-describedby={errors.address ? 'address-error' : undefined}
+                  />
+                  {errors.address && <span id="address-error" className="form-error-msg">{errors.address}</span>}
                 </div>
 
                 {/* Food Item Dropdown & Quantity Row */}

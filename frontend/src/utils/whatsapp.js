@@ -1,23 +1,42 @@
 /**
- * Formats a phone number for WhatsApp and generates the direct click-to-chat URL.
- * @param {string} phone - Target phone number with or without international prefix.
- * @param {string} message - Optional prefilled message string.
- * @returns {string} Fully formed WhatsApp URL.
+ * WhatsApp Utility for A2 CRAVINGS
+ * Official Business Number: 0314-5027631 (Local) / 923145027631 (International)
+ * Required URL format: https://wa.me/923145027631
  */
-export const getWhatsAppUrl = (phone = "923145027631", message = "") => {
-  // Clean phone number: remove spaces, dashes, parentheses and leading '+'
-  let cleanPhone = phone.replace(/[^0-9]/g, "");
 
-  // Normalize Pakistani local numbers starting with '0' to international format '92'
+export const BUSINESS_WHATSAPP_NUMBER = "923145027631";
+
+/**
+ * Formats a phone number for WhatsApp and generates the direct click-to-chat URL.
+ * Strictly adheres to:
+ * - URL format: https://wa.me/923145027631
+ * - Never includes '@'
+ * - Never starts with local '0'
+ * - Uses encodeURIComponent for query text
+ *
+ * @param {string} phone - Target phone number (defaults to 923145027631)
+ * @param {string} message - Optional prefilled message string
+ * @returns {string} Fully formed WhatsApp URL
+ */
+export const getWhatsAppUrl = (phone = BUSINESS_WHATSAPP_NUMBER, message = "") => {
+  // Strip any non-numeric characters (including @, +, -, spaces)
+  let cleanPhone = String(phone || BUSINESS_WHATSAPP_NUMBER).replace(/[^0-9]/g, "");
+
+  // If local Pakistani format with leading 0 (e.g. 03145027631), convert to international format (923145027631)
   if (cleanPhone.startsWith("0")) {
     cleanPhone = "92" + cleanPhone.slice(1);
   }
-  
-  if (!message) {
+
+  // Safety fallback to official international number if empty or malformed
+  if (!cleanPhone || cleanPhone.length < 10) {
+    cleanPhone = BUSINESS_WHATSAPP_NUMBER;
+  }
+
+  if (!message || !message.trim()) {
     return `https://wa.me/${cleanPhone}`;
   }
-  
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message.trim())}`;
 };
 
 /**

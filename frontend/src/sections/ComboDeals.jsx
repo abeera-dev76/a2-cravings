@@ -99,18 +99,18 @@ export const ComboDeals = () => {
       <div className="container">
         {/* Section Header */}
         <div className="section-header text-center">
-          <span className="section-badge">EXCLUSIVE DEALS</span>
-          <h2 id="combos-heading" className="section-title">
+          <span className="section-badge reveal-on-scroll">EXCLUSIVE DEALS</span>
+          <h2 id="combos-heading" className="section-title reveal-on-scroll reveal-delay-1">
             Special <span className="accent-gradient">Combos & Deals</span>
           </h2>
-          <p className="section-description">
+          <p className="section-description reveal-on-scroll reveal-delay-2">
             Enjoy your favorite homemade food combinations at A2 CRAVINGS. More flavor, more happiness!
             Pairing our signature pastas, loaded fries, and authentic chicken biryani with cold refreshing drinks in Rawalpindi.
           </p>
         </div>
 
         {/* Featured Card: Siblings Combo */}
-        <div className="featured-combo-wrapper">
+        <div className="featured-combo-wrapper reveal-on-scroll reveal-scale">
           <CardWithTilt className="featured-combo-card anim-card-in">
             <div className="featured-combo-grid">
               <div className="featured-combo-image-wrap">
@@ -181,8 +181,12 @@ export const ComboDeals = () => {
 
         {/* Regular Combos Grid */}
         <div className="combos-grid">
-          {regularCombos.map((combo) => (
-            <CardWithTilt key={combo.id} className="combo-card anim-card-in">
+          {regularCombos.map((combo, idx) => (
+            <CardWithTilt
+              key={combo.id}
+              className="combo-card reveal-on-scroll anim-card-in"
+              style={{ transitionDelay: `${idx * 0.09}s` }}
+            >
               <div className="combo-card-image-wrap">
                 <img
                   src={combo.image}

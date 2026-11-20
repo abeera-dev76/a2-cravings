@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Production build output
+dist/
+dist-ssr/
+build/
+frontend/dist/
+frontend/dist-ssr/
+frontend/build/
+
+# Environment files and credentials
+.env
+.env.*
+.env.local
+*.env
+*.pem
+*.key
+*.cert
+secrets.*
+
+# Cache and logs
+.vite/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

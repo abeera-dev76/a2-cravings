@@ -10,7 +10,8 @@ export const businessData = {
   },
   contact: {
     phone: "0314-5027631",
-    whatsapp: "03145027631",
+    whatsapp: "923145027631",
+    whatsappDisplay: "0314-5027631",
     whatsappIntl: "+923145027631",
     instagram: "https://www.instagram.com/a2_cravings/"
   },
