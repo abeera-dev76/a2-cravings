@@ -870,16 +870,18 @@ div[id],
 /* Category Filter Tabs */
 .menu-categories-wrapper {
   margin-bottom: 3.5rem;
-  display: flex;
-  justify-content: center;
+  /* Allow full-bleed scroll on mobile — no centering constraint */
+  overflow: visible;
 }
 
 .menu-categories-nav {
   overflow-x: auto;
-  max-width: 100%;
-  padding: 0.4rem;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* On mobile the nav bleeds past .container padding so categories can scroll edge-to-edge */
+  margin: 0 -1.5rem;
+  padding: 0.4rem 1.5rem;
 }
 
 .menu-categories-nav::-webkit-scrollbar {
@@ -887,41 +889,57 @@ div[id],
 }
 
 .menu-categories-list {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  background: rgba(18, 18, 18, 0.75);
+  gap: 0.5rem;
+  background: rgba(18, 18, 18, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  padding: 0.45rem 0.55rem;
+  padding: 0.4rem;
   border-radius: var(--radius-full);
   box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
+  /* Prevent flex items from shrinking — force scroll instead */
+  flex-wrap: nowrap;
 }
 
 .category-tab-btn {
-  padding: 0.65rem 1.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 2.6rem;
+  padding: 0 1.35rem;
   border-radius: var(--radius-full);
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 600;
   color: #B5B5B5;
   background: transparent;
   border: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.category-tab-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  width: 1em;
+  text-align: center;
 }
 
 .category-tab-btn:hover {
-  color: var(--color-white);
-  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .category-tab-btn.is-active {
-  color: var(--color-black);
+  color: #0A0A0A;
+  font-weight: 700;
   background: linear-gradient(135deg, #FFA233 0%, #FF8C00 100%);
-  box-shadow: 0 4px 18px rgba(255, 140, 0, 0.5);
-  transform: scale(1.02);
+  box-shadow: 0 4px 18px rgba(255, 140, 0, 0.45);
 }
 
 /* Responsive Grid: 3 columns desktop, 2 tablet, 1 mobile */
@@ -1105,12 +1123,19 @@ div[id],
   }
 
   .menu-categories-list {
-    gap: 0.4rem;
+    gap: 0.3rem;
+    padding: 0.35rem;
   }
 
   .category-tab-btn {
-    padding: 0.55rem 1.1rem;
-    font-size: 0.85rem;
+    height: 2.25rem;
+    padding: 0 0.9rem;
+    font-size: 0.78rem;
+    gap: 0.3rem;
+  }
+
+  .category-tab-icon {
+    font-size: 0.82rem;
   }
 }
 
@@ -3284,21 +3309,20 @@ div[id],
 
 /* Category tabs */
 [data-theme="light"] .category-tab-btn {
-  background: var(--category-btn-bg);
-  border-color: var(--border-subtle);
-  color: var(--text-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: #4B5563;
+  background: transparent;
 }
 
 [data-theme="light"] .category-tab-btn:hover {
-  border-color: var(--color-orange);
-  color: var(--color-orange);
+  color: #FF8C00;
+  background: rgba(255, 140, 0, 0.06);
 }
 
 [data-theme="light"] .category-tab-btn.is-active {
   background: linear-gradient(135deg, #FFA233 0%, #FF8C00 100%);
-  color: #080808;
+  color: #FFFFFF;
   border-color: transparent;
+  box-shadow: 0 4px 18px rgba(255, 140, 0, 0.35);
 }
 
 [data-theme="light"] .category-tab-icon {
@@ -3991,16 +4015,11 @@ div[id],
   color: #374151;
 }
 
-/* ---- MENU SECTION: category list background dark — fix for light mode ---- */
+/* ---- MENU SECTION: category list background — fix for light mode ---- */
 [data-theme="light"] .menu-categories-list {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.07);
-}
-
-[data-theme="light"] .category-tab-btn {
-  color: var(--text-secondary);
-  background: transparent;
 }
 
 /* ---- WHY CHOOSE US: section heading uses --color-white token (dark in light) ---- */
