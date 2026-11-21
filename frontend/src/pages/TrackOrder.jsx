@@ -71,31 +71,6 @@ export const TrackOrder = () => {
 
   const activePollingRef = useRef(null);
 
-  // Parse order ID from URL query or hash on mount and on route changes
-  useEffect(() => {
-    const parseAndFetchFromUrl = () => {
-      if (typeof window === 'undefined') return;
-      window.scrollTo({ top: 0, behavior: 'instant' });
-
-      const params = new URLSearchParams(window.location.search);
-      const urlOrder = params.get('orderId') || params.get('order') || window.location.hash.replace('#', '');
-      if (urlOrder) {
-        const clean = decodeURIComponent(urlOrder).trim();
-        setInputOrderNumber(clean);
-        handleFetchOrder(clean, false);
-      }
-    };
-
-    parseAndFetchFromUrl();
-
-    window.addEventListener('popstate', parseAndFetchFromUrl);
-    window.addEventListener('a2:route-change', parseAndFetchFromUrl);
-    return () => {
-      window.removeEventListener('popstate', parseAndFetchFromUrl);
-      window.removeEventListener('a2:route-change', parseAndFetchFromUrl);
-    };
-  }, [handleFetchOrder]);
-
   // Fetch Order Details
   const handleFetchOrder = useCallback(async (orderNum, isSilentRefresh = false) => {
     if (!orderNum || !orderNum.trim()) {
@@ -125,6 +100,31 @@ export const TrackOrder = () => {
       setIsRefreshing(false);
     }
   }, []);
+
+  // Parse order ID from URL query or hash on mount and on route changes
+  useEffect(() => {
+    const parseAndFetchFromUrl = () => {
+      if (typeof window === 'undefined') return;
+      window.scrollTo({ top: 0, behavior: 'instant' });
+
+      const params = new URLSearchParams(window.location.search);
+      const urlOrder = params.get('orderId') || params.get('order') || window.location.hash.replace('#', '');
+      if (urlOrder) {
+        const clean = decodeURIComponent(urlOrder).trim();
+        setInputOrderNumber(clean);
+        handleFetchOrder(clean, false);
+      }
+    };
+
+    parseAndFetchFromUrl();
+
+    window.addEventListener('popstate', parseAndFetchFromUrl);
+    window.addEventListener('a2:route-change', parseAndFetchFromUrl);
+    return () => {
+      window.removeEventListener('popstate', parseAndFetchFromUrl);
+      window.removeEventListener('a2:route-change', parseAndFetchFromUrl);
+    };
+  }, [handleFetchOrder]);
 
   // Submit Search Form
   const handleSubmit = (e) => {
