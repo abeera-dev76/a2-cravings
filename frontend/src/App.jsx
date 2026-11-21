@@ -4,14 +4,17 @@ import NotFound from './pages/NotFound';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import FAQ from './pages/FAQ';
-import ContactUs from './pages/ContactUs';
 import ShippingPolicy from './pages/ShippingPolicy';
 import RefundPolicy from './pages/RefundPolicy';
 import TrackOrder from './pages/TrackOrder';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import SignUp from './pages/SignUp';
+import SignIn from './pages/SignIn';
+import Profile from './pages/Profile';
 import { ThemeProvider } from './context/ThemeContext';
 import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   const [currentPath, setCurrentPath] = useState(() => {
@@ -56,7 +59,18 @@ function App() {
       return <FAQ />;
     }
     if (path === '/contact-us' || path === '/contact') {
-      return <ContactUs />;
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          const el = document.getElementById('contact');
+          if (el) {
+            const navHeight = 74;
+            const extraOffset = window.innerWidth <= 540 ? 15 : 25;
+            const targetPos = el.getBoundingClientRect().top + window.pageYOffset - (navHeight + extraOffset);
+            window.scrollTo({ top: Math.max(0, targetPos), behavior: 'smooth' });
+          }
+        }, 120);
+      }
+      return <Home />;
     }
     if (path === '/about-us' || path === '/about') {
       if (typeof window !== 'undefined') {
@@ -87,6 +101,16 @@ function App() {
       return <TrackOrder />;
     }
 
+    if (path === '/signup' || path === '/register') {
+      return <SignUp />;
+    }
+    if (path === '/signin' || path === '/login') {
+      return <SignIn />;
+    }
+    if (path === '/profile' || path === '/my-account' || path === '/account') {
+      return <Profile />;
+    }
+
     if (path === '/admin/login' || path === '/admin-login') {
       return <AdminLogin />;
     }
@@ -102,11 +126,13 @@ function App() {
   };
 
   return (
-    <CartProvider>
-      <ThemeProvider>
-        {renderRoute()}
-      </ThemeProvider>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <ThemeProvider>
+          {renderRoute()}
+        </ThemeProvider>
+      </CartProvider>
+    </AuthProvider>
   );
 }
 

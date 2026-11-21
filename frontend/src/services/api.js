@@ -319,6 +319,229 @@ export const checkApiHealth = async () => {
   }
 };
 
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Customer Authentication & Profile API Methods
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export const getCustomerToken = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('a2_customer_token');
+};
+
+export const getCustomerUser = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const user = localStorage.getItem('a2_customer_user');
+    return user ? JSON.parse(user) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const customerLogout = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('a2_customer_token');
+    localStorage.removeItem('a2_customer_user');
+    window.dispatchEvent(new Event('a2:auth-change'));
+  }
+};
+
+export const customerRegister = async ({ name, email, phone, password, confirmPassword }) => {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ name, email, phone, password, confirmPassword }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Registration failed.');
+  }
+
+  if (typeof window !== 'undefined' && data.token) {
+    localStorage.setItem('a2_customer_token', data.token);
+    localStorage.setItem('a2_customer_user', JSON.stringify(data.user));
+    window.dispatchEvent(new Event('a2:auth-change'));
+  }
+
+  return data;
+};
+
+export const customerLogin = async (email, password) => {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Login failed. Please check your credentials.');
+  }
+
+  if (typeof window !== 'undefined' && data.token) {
+    localStorage.setItem('a2_customer_token', data.token);
+    localStorage.setItem('a2_customer_user', JSON.stringify(data.user));
+    window.dispatchEvent(new Event('a2:auth-change'));
+  }
+
+  return data;
+};
+
+export const fetchCustomerProfile = async () => {
+  const token = getCustomerToken();
+  if (!token) throw new Error('Not authenticated.');
+
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    if (res.status === 401) {
+      customerLogout();
+    }
+    throw new Error(data.message || 'Failed to fetch customer profile.');
+  }
+
+  if (typeof window !== 'undefined' && data.user) {
+    localStorage.setItem('a2_customer_user', JSON.stringify(data.user));
+  }
+
+  return data.user;
+};
+
+export const updateCustomerProfile = async ({ name, phone }) => {
+  const token = getCustomerToken();
+  if (!token) throw new Error('Not authenticated.');
+
+  const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name, phone }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update profile.');
+  }
+
+  if (typeof window !== 'undefined' && data.user) {
+    localStorage.setItem('a2_customer_user', JSON.stringify(data.user));
+    window.dispatchEvent(new Event('a2:auth-change'));
+  }
+
+  return data;
+};
+
+export const changeCustomerPassword = async ({ currentPassword, newPassword, confirmNewPassword }) => {
+  const token = getCustomerToken();
+  if (!token) throw new Error('Not authenticated.');
+
+  const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to change password.');
+  }
+
+  return data;
+};
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Admin User Management API Methods
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export const fetchAdminUserStats = async () => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/users/stats`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to load user statistics.');
+  }
+
+  return data.data;
+};
+
+export const fetchAdminUsers = async ({ page = 1, limit = 15, search = '' } = {}) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  let url = `${API_BASE_URL}/admin/users?page=${page}&limit=${limit}`;
+  if (search && search.trim()) {
+    url += `&search=${encodeURIComponent(search.trim())}`;
+  }
+
+  const res = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    if (res.status === 401) {
+      adminLogout();
+    }
+    throw new Error(data.message || 'Failed to load registered users.');
+  }
+
+  return data;
+};
+
+export const fetchAdminUserById = async (userId) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to load user details.');
+  }
+
+  return data.data;
+};
+
 export default {
   fetchCategories,
   fetchProducts,
@@ -332,6 +555,17 @@ export default {
   fetchAdminProfile,
   fetchAdminOrders,
   updateAdminOrderStatus,
+  getCustomerToken,
+  getCustomerUser,
+  customerLogout,
+  customerRegister,
+  customerLogin,
+  fetchCustomerProfile,
+  updateCustomerProfile,
+  changeCustomerPassword,
+  fetchAdminUserStats,
+  fetchAdminUsers,
+  fetchAdminUserById,
   checkApiHealth,
   API_BASE_URL,
 };

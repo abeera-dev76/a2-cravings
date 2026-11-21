@@ -255,7 +255,7 @@ export const PrivacyPolicy = () => {
                 <button
                   type="button"
                   className="legal-btn legal-btn-secondary"
-                  onClick={() => navigate('/contact-us')}
+                  onClick={() => navigate('/', 'contact')}
                 >
                   <FontAwesomeIcon icon={faHeadset} />
                   <span>Contact Page</span>

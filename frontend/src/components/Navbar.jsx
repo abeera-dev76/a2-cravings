@@ -1,16 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSun, faMoon, faArrowRight, faXmark, faCartShopping } from '@fortawesome/free-solid-svg-icons';
+import {
+  faSun,
+  faMoon,
+  faArrowRight,
+  faXmark,
+  faCartShopping,
+  faUser,
+  faRightToBracket,
+  faUserPlus,
+  faRightFromBracket
+} from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { businessData } from '../data/businessData';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
 import { useTheme } from '../context/ThemeContext';
 import { navigate } from '../utils/navigation';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import '../styles/auth.css';
 
 export const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { totalCount, openCart } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
@@ -195,12 +208,9 @@ export const Navbar = () => {
               About Us
             </a>
             <a
-              href="/contact-us"
-              className={`nav-link ${currentPath === '/contact-us' || currentPath === '/contact' ? 'is-active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/contact-us');
-              }}
+              href="#contact"
+              className={`nav-link ${isHome && activeSection === 'contact' ? 'is-active' : ''}`}
+              onClick={(e) => scrollToSection(e, 'contact')}
             >
               Contact
             </a>
@@ -242,6 +252,48 @@ export const Navbar = () => {
                 <span className="nav-cart-badge" aria-hidden="true">{totalCount > 9 ? '9+' : totalCount}</span>
               )}
             </button>
+
+            {/* Desktop Customer Authentication */}
+            <div className="nav-auth-group">
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  className="nav-user-btn"
+                  onClick={() => navigate('/profile')}
+                  title={`Signed in as ${user?.name || 'Customer'}`}
+                >
+                  <span className="nav-user-avatar">
+                    {(user?.name || 'U')[0].toUpperCase()}
+                  </span>
+                  <span className="nav-user-name">
+                    {(user?.name || 'Account').split(' ')[0]}
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <a
+                    href="/signin"
+                    className="nav-auth-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/signin');
+                    }}
+                  >
+                    Sign In
+                  </a>
+                  <a
+                    href="/signup"
+                    className="nav-signup-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/signup');
+                    }}
+                  >
+                    Sign Up
+                  </a>
+                </>
+              )}
+            </div>
 
             <a
               href={orderNowUrl}
@@ -363,13 +415,9 @@ export const Navbar = () => {
             <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
           </a>
           <a
-            href="/contact-us"
-            className={`mobile-nav-link ${currentPath === '/contact-us' || currentPath === '/contact' ? 'is-active' : ''}`}
-            onClick={(e) => {
-              e.preventDefault();
-              closeMobileMenu();
-              navigate('/contact-us');
-            }}
+            href="#contact"
+            className={`mobile-nav-link ${isHome && activeSection === 'contact' ? 'is-active' : ''}`}
+            onClick={(e) => scrollToSection(e, 'contact')}
           >
             <span>Contact</span>
             <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
@@ -399,6 +447,78 @@ export const Navbar = () => {
             <FontAwesomeIcon icon={faArrowRight} className="mobile-nav-arrow" aria-hidden="true" />
           </a>
         </nav>
+
+        {/* Customer Auth in Mobile Drawer */}
+        {isAuthenticated ? (
+          <div className="mobile-user-card">
+            <div
+              className="mobile-user-info"
+              onClick={() => {
+                closeMobileMenu();
+                navigate('/profile');
+              }}
+            >
+              <div className="mobile-user-avatar">{(user?.name || 'U')[0].toUpperCase()}</div>
+              <div>
+                <div className="mobile-user-name">{user?.name}</div>
+                <div className="mobile-user-email">{user?.email}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                className="mobile-profile-subbtn"
+                onClick={() => {
+                  closeMobileMenu();
+                  navigate('/profile');
+                }}
+              >
+                <FontAwesomeIcon icon={faUser} />
+                <span>My Profile</span>
+              </button>
+              <button
+                type="button"
+                className="mobile-profile-subbtn logout"
+                onClick={() => {
+                  closeMobileMenu();
+                  logout();
+                  navigate('/');
+                }}
+              >
+                <FontAwesomeIcon icon={faRightFromBracket} />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mobile-auth-actions">
+            <a
+              href="/signin"
+              className="btn btn-secondary mobile-auth-btn"
+              style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+              onClick={(e) => {
+                e.preventDefault();
+                closeMobileMenu();
+                navigate('/signin');
+              }}
+            >
+              <FontAwesomeIcon icon={faRightToBracket} />
+              <span>Sign In</span>
+            </a>
+            <a
+              href="/signup"
+              className="btn btn-primary mobile-auth-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                closeMobileMenu();
+                navigate('/signup');
+              }}
+            >
+              <FontAwesomeIcon icon={faUserPlus} />
+              <span>Sign Up</span>
+            </a>
+          </div>
+        )}
 
         {/* Drawer Bottom Footer CTA */}
         <div className="mobile-nav-footer">

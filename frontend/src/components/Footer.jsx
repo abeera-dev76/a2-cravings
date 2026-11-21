@@ -190,9 +190,9 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="/contact-us"
+                  href="#contact"
                   className="footer-link"
-                  onClick={(e) => handlePageNav(e, '/contact-us')}
+                  onClick={(e) => scrollToTarget(e, 'contact')}
                 >
                   Contact
                 </a>

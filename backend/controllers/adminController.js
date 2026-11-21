@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const Order = require('../models/Order');
+const User = require('../models/User');
 
 /**
  * Generate JWT Token helper
@@ -193,9 +194,144 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/admin/users/stats
+ * Real-time User KPI Statistics directly from MongoDB
+ */
+const getAdminUserStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+
+    // Start of today (00:00:00)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Start of this month (1st day 00:00:00)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [newUsersToday, newUsersThisMonth] = await Promise.all([
+      User.countDocuments({ createdAt: { $gte: startOfToday } }),
+      User.countDocuments({ createdAt: { $gte: startOfMonth } }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        newUsersToday,
+        newUsersThisMonth,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching admin user stats:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve user statistics.',
+    });
+  }
+};
+
+/**
+ * GET /api/admin/users
+ * Real MongoDB User List with search & pagination (strictly excluding passwords)
+ */
+const getAdminUsers = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 15));
+    const skip = (page - 1) * limit;
+    const search = String(req.query.search || '').trim();
+
+    const query = {};
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.$or = [
+        { name: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { phone: { $regex: escaped, $options: 'i' } },
+      ];
+    }
+
+    const [total, users] = await Promise.all([
+      User.countDocuments(query),
+      User.find(query)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return res.status(200).json({
+      success: true,
+      count: users.length,
+      total,
+      totalPages,
+      currentPage: page,
+      data: users,
+    });
+  } catch (error) {
+    console.error('Error fetching admin users:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve users list.',
+    });
+  }
+};
+
+/**
+ * GET /api/admin/users/:id
+ * Retrieve single customer details (strictly excluding passwords)
+ */
+const getAdminUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format.',
+      });
+    }
+
+    const user = await User.findById(id).select('-password').lean();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found.',
+      });
+    }
+
+    // Also fetch associated order count and history if any
+    const orders = await Order.find({ 'customer.phone': user.phone })
+      .select('orderNumber status totalAmount createdAt items')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...user,
+        ordersCount: orders.length,
+        orders,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user details:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve customer details.',
+    });
+  }
+};
+
 module.exports = {
   loginAdmin,
   getAdminProfile,
   getAdminOrders,
   updateOrderStatus,
+  getAdminUserStats,
+  getAdminUsers,
+  getAdminUserById,
 };

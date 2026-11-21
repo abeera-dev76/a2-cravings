@@ -505,10 +505,17 @@
   transition: all 0.2s ease;
 }
 
-.admin-refresh-btn:hover {
+.admin-refresh-btn:hover:not(:disabled) {
   background: #252525;
   border-color: #FF8C00;
   color: #FF8C00;
+}
+
+.admin-refresh-btn:disabled,
+.admin-refresh-btn.is-refreshing {
+  opacity: 0.65;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .admin-site-link-btn {

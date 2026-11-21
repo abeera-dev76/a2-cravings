@@ -9,7 +9,8 @@ import {
   faArrowRight,
   faBagShopping,
   faCircleCheck,
-  faTruckFast
+  faTruckFast,
+  faCircleNotch
 } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { useCart } from '../context/CartContext';
@@ -17,6 +18,7 @@ import { businessData } from '../data/businessData';
 import { getWhatsAppUrl } from '../utils/whatsapp';
 import { createOrder } from '../services/api';
 import { navigate } from '../utils/navigation';
+import { useAuth } from '../context/AuthContext';
 
 export const CartDrawer = () => {
   const {
@@ -30,6 +32,8 @@ export const CartDrawer = () => {
     totalPrice
   } = useCart();
 
+  const { user, isAuthenticated } = useAuth();
+
   const [checkoutData, setCheckoutData] = useState(() => {
     try {
       const saved = localStorage.getItem('a2_customer_checkout_info');
@@ -42,6 +46,7 @@ export const CartDrawer = () => {
   const [errors, setErrors] = useState({});
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [placedOrderSuccess, setPlacedOrderSuccess] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Close drawer on ESC key
   useEffect(() => {
@@ -65,6 +70,25 @@ export const CartDrawer = () => {
       document.body.style.overflow = '';
     };
   }, [isCartOpen]);
+
+  // Prefill name and phone if customer is logged in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setCheckoutData((prev) => {
+        let changed = false;
+        const updated = { ...prev };
+        if (!updated.name.trim() && user.name) {
+          updated.name = user.name;
+          changed = true;
+        }
+        if (!updated.phone.trim() && user.phone) {
+          updated.phone = user.phone;
+          changed = true;
+        }
+        return changed ? updated : prev;
+      });
+    }
+  }, [isAuthenticated, user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -102,10 +126,12 @@ export const CartDrawer = () => {
 
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!validateCheckout()) {
       return;
     }
 
+    setIsSubmitting(true);
     let orderNumber = null;
     try {
       // Record order in MongoDB backend
@@ -128,6 +154,8 @@ export const CartDrawer = () => {
       }
     } catch (apiErr) {
       console.warn('Backend order recording skipped or failed, continuing with direct WhatsApp checkout:', apiErr.message);
+    } finally {
+      setIsSubmitting(false);
     }
 
     // Build structured multi-item WhatsApp order message
@@ -154,14 +182,18 @@ export const CartDrawer = () => {
     const orderUrl = getWhatsAppUrl(businessData.contact.whatsapp, message);
     window.open(orderUrl, '_blank', 'noopener,noreferrer');
 
-    // Display confirmation & tracking option in cart drawer
     if (orderNumber) {
+      // Order successfully created — clear cart, close drawer, redirect to tracking page
+      clearCart();
+      closeCart();
+      navigate(`/track-order?orderId=${encodeURIComponent(orderNumber)}`);
+    } else {
+      // Backend didn't return an order number (creation failed) — do NOT redirect!
       setPlacedOrderSuccess({
-        orderNumber,
+        orderNumber: null,
         total: totalPrice,
         whatsappUrl: orderUrl,
       });
-      clearCart();
     }
   };
 
@@ -198,32 +230,12 @@ export const CartDrawer = () => {
               <div className="cart-success-badge">
                 <FontAwesomeIcon icon={faCircleCheck} />
               </div>
-              <h3 className="cart-success-title">Order Placed Successfully!</h3>
+              <h3 className="cart-success-title">Order Sent via WhatsApp!</h3>
               <p className="cart-success-desc">
-                Your order has been recorded in our system and sent to WhatsApp to confirm with our kitchen team.
+                Your order was sent to our WhatsApp. Our team will confirm it shortly.
               </p>
 
-              <div className="cart-success-order-box">
-                <span className="cart-success-label">Your Tracking Order Number</span>
-                <span className="cart-success-number">#{placedOrderSuccess.orderNumber}</span>
-                <span className="cart-success-hint">Save this number or track anytime</span>
-              </div>
-
               <div className="cart-success-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary cart-track-order-btn"
-                  onClick={() => {
-                    const ordNum = placedOrderSuccess.orderNumber;
-                    setPlacedOrderSuccess(null);
-                    closeCart();
-                    navigate(`/track-order?orderId=${encodeURIComponent(ordNum)}`);
-                  }}
-                >
-                  <FontAwesomeIcon icon={faTruckFast} />
-                  <span>Track Your Order Live →</span>
-                </button>
-
                 <a
                   href={placedOrderSuccess.whatsappUrl}
                   target="_blank"
@@ -430,9 +442,19 @@ export const CartDrawer = () => {
                 type="button"
                 className="btn btn-primary cart-checkout-btn"
                 onClick={handleCheckoutSubmit}
+                disabled={isSubmitting}
               >
-                <FontAwesomeIcon icon={faWhatsapp} className="btn-icon" />
-                <span>Confirm Order on WhatsApp (Rs {totalPrice.toLocaleString()})</span>
+                {isSubmitting ? (
+                  <>
+                    <FontAwesomeIcon icon={faCircleNotch} spin className="btn-icon" />
+                    <span>Placing Order & Redirecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faWhatsapp} className="btn-icon" />
+                    <span>Confirm Order on WhatsApp (Rs {totalPrice.toLocaleString()})</span>
+                  </>
+                )}
               </button>
             ) : (
               <button

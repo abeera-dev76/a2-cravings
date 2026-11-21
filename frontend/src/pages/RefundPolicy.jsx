@@ -231,7 +231,7 @@ export const RefundPolicy = () => {
                 <button
                   type="button"
                   className="legal-btn legal-btn-secondary"
-                  onClick={() => navigate('/contact-us')}
+                  onClick={() => navigate('/', 'contact')}
                 >
                   <FontAwesomeIcon icon={faHeadset} />
                   <span>Contact Page</span>

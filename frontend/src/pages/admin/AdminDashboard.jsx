@@ -24,7 +24,9 @@ import {
   faXmark,
   faBars,
   faCircleNotch,
-  faArrowRight
+  faArrowRight,
+  faUser,
+  faCalendarDays
 } from '@fortawesome/free-solid-svg-icons';
 import {
   getAdminToken,
@@ -34,7 +36,10 @@ import {
   updateAdminOrderStatus,
   fetchAdminProfile,
   fetchProducts,
-  fetchCategories
+  fetchCategories,
+  fetchAdminUserStats,
+  fetchAdminUsers,
+  fetchAdminUserById
 } from '../../services/api';
 import { navigate } from '../../utils/navigation';
 import './admin.css';
@@ -67,6 +72,18 @@ export const AdminDashboard = () => {
   const [modalStatus, setModalStatus] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updateToast, setUpdateToast] = useState(null);
+
+  // Registered Users State (MongoDB User Management)
+  const [userStats, setUserStats] = useState({ totalUsers: 0, newUsersToday: 0, newUsersThisMonth: 0 });
+  const [usersList, setUsersList] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState(null);
+  const [usersSearch, setUsersSearch] = useState('');
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // 1. Auth Guard
   useEffect(() => {
@@ -130,11 +147,44 @@ export const AdminDashboard = () => {
     }
   }, []);
 
+  // 5. Load registered users from MongoDB
+  const loadUsersData = useCallback(async () => {
+    setLoadingUsers(true);
+    setUsersError(null);
+    try {
+      const [statsData, usersData] = await Promise.all([
+        fetchAdminUserStats(),
+        fetchAdminUsers({ page: usersPage, limit: 15, search: usersSearch }),
+      ]);
+      setUserStats(statsData || { totalUsers: 0, newUsersToday: 0, newUsersThisMonth: 0 });
+      setUsersList(usersData.data || []);
+      setUsersTotalPages(usersData.totalPages || 1);
+    } catch (err) {
+      setUsersError(err.message || 'Failed to load users from database.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [usersPage, usersSearch]);
+
   useEffect(() => {
     loadOrders();
     loadStats();
     loadMenuData();
-  }, [loadOrders, loadStats, loadMenuData]);
+    loadUsersData();
+  }, [loadOrders, loadStats, loadMenuData, loadUsersData]);
+
+  // Open Individual Customer Details Modal
+  const handleOpenUserDetail = async (userId) => {
+    setLoadingUserDetail(true);
+    try {
+      const detail = await fetchAdminUserById(userId);
+      setSelectedUserDetail(detail);
+    } catch (err) {
+      console.error('Failed to load user detail:', err.message);
+    } finally {
+      setLoadingUserDetail(false);
+    }
+  };
 
   // Handle Logout
   const handleLogout = () => {
@@ -263,13 +313,14 @@ export const AdminDashboard = () => {
     return prods;
   }, [productsList, menuFilterCategory, menuSearch]);
 
-  // 8 Organized Navigation Items (live database counts only, no dummy fallbacks)
+  // Organized Navigation Items (live database counts only, no dummy fallbacks)
   const navItems = [
     { id: 'overview',   label: 'Dashboard Overview', icon: faGaugeHigh },
     { id: 'orders',     label: 'Orders Management',  icon: faReceipt, count: stats.pending },
-    { id: 'menu',       label: 'Menu & Products',    icon: faUtensils, count: productsList.length },
-    { id: 'categories', label: 'Categories',         icon: faLayerGroup, count: realCategoriesCount },
-    { id: 'customers',  label: 'Customers',          icon: faUsers, count: uniqueCustomers.length },
+    { id: 'users',      label: 'Users',              icon: faUsers, count: userStats.totalUsers },
+    { id: 'menu',       label: 'Menu & Products',    icon: faUtensils },
+    { id: 'categories', label: 'Categories',         icon: faLayerGroup },
+    { id: 'customers',  label: 'Order Customers',    icon: faUser, count: uniqueCustomers.length },
     { id: 'website',    label: 'Website Management', icon: faGlobe },
     { id: 'analytics',  label: 'Analytics & Reports',icon: faChartLine },
     { id: 'settings',   label: 'Settings',           icon: faGear },
@@ -405,16 +456,31 @@ export const AdminDashboard = () => {
           <div className="admin-header-actions">
             <button
               type="button"
-              className="admin-refresh-btn"
-              onClick={() => {
-                loadOrders();
-                loadStats();
-                if (activeTab === 'menu' || activeTab === 'categories') loadMenuData();
+              className={`admin-refresh-btn${isRefreshing ? ' is-refreshing' : ''}`}
+              onClick={async () => {
+                if (isRefreshing) return;
+                setIsRefreshing(true);
+                try {
+                  await Promise.allSettled([
+                    loadOrders(),
+                    loadStats(),
+                    loadUsersData(),
+                    loadMenuData(),
+                  ]);
+                  setUpdateToast({ type: 'success', message: 'Data refreshed successfully' });
+                  setTimeout(() => setUpdateToast(null), 3000);
+                } catch {
+                  setUpdateToast({ type: 'error', message: 'Some data failed to refresh' });
+                  setTimeout(() => setUpdateToast(null), 3000);
+                } finally {
+                  setIsRefreshing(false);
+                }
               }}
+              disabled={isRefreshing}
               title="Refresh all data"
             >
-              <FontAwesomeIcon icon={faArrowsRotate} />
-              <span>Refresh</span>
+              <FontAwesomeIcon icon={faArrowsRotate} spin={isRefreshing} />
+              <span>{isRefreshing ? 'Refreshing…' : 'Refresh'}</span>
             </button>
 
             <a
@@ -832,6 +898,208 @@ export const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ─── TAB: USERS MANAGEMENT (REAL MONGODB USERS) ─── */}
+        {activeTab === 'users' && (
+          <div className="admin-view-content">
+            {/* KPI Statistics Grid directly from MongoDB */}
+            <section className="admin-stats-grid" aria-label="User Management Statistics">
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap total">
+                  <FontAwesomeIcon icon={faUsers} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">Total Registered Users</span>
+                  <span className="admin-stat-value">{userStats.totalUsers}</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap pending" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981' }}>
+                  <FontAwesomeIcon icon={faUser} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">New Users Today</span>
+                  <span className="admin-stat-value" style={{ color: '#10B981' }}>{userStats.newUsersToday}</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap confirmed" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6' }}>
+                  <FontAwesomeIcon icon={faCalendarDays} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">New Users This Month</span>
+                  <span className="admin-stat-value" style={{ color: '#3B82F6' }}>{userStats.newUsersThisMonth}</span>
+                </div>
+              </div>
+            </section>
+
+            {/* Search & Filter Controls */}
+            <div className="admin-controls-card">
+              <div className="admin-search-box" style={{ width: '100%', maxWidth: '450px' }}>
+                <FontAwesomeIcon icon={faMagnifyingGlass} className="admin-search-icon" />
+                <input
+                  type="text"
+                  className="admin-search-input"
+                  placeholder="Search by customer name, email or phone..."
+                  value={usersSearch}
+                  onChange={(e) => {
+                    setUsersSearch(e.target.value);
+                    setUsersPage(1);
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                className="admin-action-btn"
+                onClick={loadUsersData}
+                title="Refresh users from MongoDB"
+              >
+                <FontAwesomeIcon icon={faArrowsRotate} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {/* Users Table */}
+            <div className="admin-table-card">
+              {loadingUsers ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: '#FF8C00' }}>
+                  <FontAwesomeIcon icon={faCircleNotch} spin size="2x" />
+                  <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.7)' }}>
+                    Loading registered users from MongoDB...
+                  </p>
+                </div>
+              ) : usersError ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: '#F87171' }}>
+                  <p>{usersError}</p>
+                  <button type="button" className="admin-action-btn" onClick={loadUsersData}>
+                    Retry
+                  </button>
+                </div>
+              ) : usersList.length === 0 ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                  <FontAwesomeIcon icon={faUsers} size="2x" style={{ marginBottom: '1rem' }} />
+                  <h3>No Registered Users Found</h3>
+                  <p>There are no registered customer accounts matching your query in MongoDB.</p>
+                </div>
+              ) : (
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Customer Name</th>
+                        <th>Email Address</th>
+                        <th>Phone Number</th>
+                        <th>Registration Date</th>
+                        <th>Account Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usersList.map((u) => (
+                        <tr key={u._id || u.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <div
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(255, 140, 0, 0.15)',
+                                  color: '#FF8C00',
+                                  fontWeight: 700,
+                                  fontSize: '0.82rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                {(u.name || 'C')[0].toUpperCase()}
+                              </div>
+                              <strong style={{ color: '#FFFFFF' }}>{u.name}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <a href={`mailto:${u.email}`} style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}>
+                              {u.email}
+                            </a>
+                          </td>
+                          <td>
+                            <a href={`tel:${u.phone}`} style={{ color: '#FF8C00', textDecoration: 'none' }}>
+                              {u.phone}
+                            </a>
+                          </td>
+                          <td style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>
+                            {u.createdAt
+                              ? new Date(u.createdAt).toLocaleDateString('en-PK', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : 'N/A'}
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                padding: '0.25rem 0.65rem',
+                                borderRadius: '999px',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                textTransform: 'capitalize',
+                                background: u.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                color: u.status === 'active' ? '#10B981' : '#F87171',
+                              }}
+                            >
+                              ● {u.status || 'Active'}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="admin-action-btn"
+                              onClick={() => handleOpenUserDetail(u._id || u.id)}
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {usersTotalPages > 1 && (
+                <div className="admin-pagination-bar">
+                  <span>Page {usersPage} of {usersTotalPages}</span>
+                  <div className="admin-pag-btns">
+                    <button
+                      type="button"
+                      className="admin-pag-btn"
+                      disabled={usersPage <= 1}
+                      onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-pag-btn"
+                      disabled={usersPage >= usersTotalPages}
+                      onClick={() => setUsersPage((p) => Math.min(usersTotalPages, p + 1))}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ─── TAB 3: MENU & PRODUCTS ─── */}
         {activeTab === 'menu' && (
           <div className="admin-view-content">
@@ -1213,6 +1481,124 @@ export const AdminDashboard = () => {
                     <span style={{ color: '#FF8C00' }}>Rs {selectedOrder.totalAmount?.toLocaleString()}</span>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Individual Customer Details Modal ─── */}
+      {selectedUserDetail && (
+        <div className="admin-modal-overlay" onClick={() => setSelectedUserDetail(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">
+                Customer: <span style={{ color: '#FF8C00' }}>{selectedUserDetail.name}</span>
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setSelectedUserDetail(null)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body">
+              <div>
+                <h3 className="admin-modal-section-title">Registration Details</h3>
+                <div className="admin-info-box">
+                  <div className="admin-info-row">
+                    <span className="admin-info-label">Full Name</span>
+                    <span className="admin-info-val">{selectedUserDetail.name}</span>
+                  </div>
+                  <div className="admin-info-row">
+                    <span className="admin-info-label">Email Address</span>
+                    <span className="admin-info-val">
+                      <a href={`mailto:${selectedUserDetail.email}`} style={{ color: '#FF8C00', textDecoration: 'none' }}>
+                        {selectedUserDetail.email}
+                      </a>
+                    </span>
+                  </div>
+                  <div className="admin-info-row">
+                    <span className="admin-info-label">Phone Number</span>
+                    <span className="admin-info-val">
+                      <a href={`tel:${selectedUserDetail.phone}`} style={{ color: '#FF8C00', textDecoration: 'none' }}>
+                        {selectedUserDetail.phone}
+                      </a>
+                    </span>
+                  </div>
+                  <div className="admin-info-row">
+                    <span className="admin-info-label">Account Status</span>
+                    <span
+                      className="admin-info-val"
+                      style={{ color: selectedUserDetail.status === 'active' ? '#10B981' : '#F87171' }}
+                    >
+                      ● {selectedUserDetail.status || 'Active'}
+                    </span>
+                  </div>
+                  <div className="admin-info-row">
+                    <span className="admin-info-label">Registered On</span>
+                    <span className="admin-info-val">
+                      {selectedUserDetail.createdAt
+                        ? new Date(selectedUserDetail.createdAt).toLocaleString('en-PK')
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="admin-info-row">
+                    <span className="admin-info-label">Last Updated</span>
+                    <span className="admin-info-val">
+                      {selectedUserDetail.updatedAt
+                        ? new Date(selectedUserDetail.updatedAt).toLocaleString('en-PK')
+                        : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order History for this customer */}
+              <div>
+                <h3 className="admin-modal-section-title">
+                  Associated Orders ({selectedUserDetail.ordersCount || 0})
+                </h3>
+                {(!selectedUserDetail.orders || selectedUserDetail.orders.length === 0) ? (
+                  <div style={{ padding: '1.25rem', textAlign: 'center', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>
+                    No orders placed with this customer's phone number yet.
+                  </div>
+                ) : (
+                  <div className="admin-info-box" style={{ padding: '0.5rem' }}>
+                    <table className="admin-items-table">
+                      <thead>
+                        <tr>
+                          <th>Order #</th>
+                          <th>Date</th>
+                          <th>Total</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedUserDetail.orders.map((ord) => (
+                          <tr key={ord._id || ord.orderNumber}>
+                            <td>
+                              <code style={{ color: '#FF8C00' }}>#{ord.orderNumber}</code>
+                            </td>
+                            <td style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                              {ord.createdAt
+                                ? new Date(ord.createdAt).toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })
+                                : ''}
+                            </td>
+                            <td style={{ fontWeight: 600 }}>Rs {ord.totalAmount?.toLocaleString()}</td>
+                            <td>
+                              <span className={`admin-badge ${ord.status}`}>
+                                {ord.status?.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>

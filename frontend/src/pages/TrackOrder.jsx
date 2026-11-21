@@ -71,11 +71,12 @@ export const TrackOrder = () => {
 
   const activePollingRef = useRef(null);
 
-  // Parse order ID from URL query or hash on mount
+  // Parse order ID from URL query or hash on mount and on route changes
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    const parseAndFetchFromUrl = () => {
+      if (typeof window === 'undefined') return;
+      window.scrollTo({ top: 0, behavior: 'instant' });
 
-    if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlOrder = params.get('orderId') || params.get('order') || window.location.hash.replace('#', '');
       if (urlOrder) {
@@ -83,8 +84,17 @@ export const TrackOrder = () => {
         setInputOrderNumber(clean);
         handleFetchOrder(clean, false);
       }
-    }
-  }, []);
+    };
+
+    parseAndFetchFromUrl();
+
+    window.addEventListener('popstate', parseAndFetchFromUrl);
+    window.addEventListener('a2:route-change', parseAndFetchFromUrl);
+    return () => {
+      window.removeEventListener('popstate', parseAndFetchFromUrl);
+      window.removeEventListener('a2:route-change', parseAndFetchFromUrl);
+    };
+  }, [handleFetchOrder]);
 
   // Fetch Order Details
   const handleFetchOrder = useCallback(async (orderNum, isSilentRefresh = false) => {
