@@ -3,7 +3,28 @@
  * Connects React frontend to Express + MongoDB backend
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (envUrl) {
+    // Strip trailing slashes
+    let url = envUrl.replace(/\/+$/, '');
+    // Ensure /api suffix exists
+    if (!url.endsWith('/api')) {
+      url = `${url}/api`;
+    }
+    return url;
+  }
+
+  if (import.meta.env.PROD && typeof window !== 'undefined') {
+    console.warn(
+      '[A2 CRAVINGS] VITE_API_URL is not configured in production environment variables. Falling back to http://localhost:5000/api.'
+    );
+  }
+
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Normalizes a single product from MongoDB so frontend components
