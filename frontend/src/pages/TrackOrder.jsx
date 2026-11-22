@@ -173,6 +173,48 @@ export const TrackOrder = () => {
       )
     : getWhatsAppUrl(businessData.contact.whatsapp, 'Assalam o Alaikum A2 Cravings! I have a question about my order.');
 
+  // Full Pre-filled Structured Order Confirmation Message for WhatsApp
+  const getConfirmationWhatsAppUrl = () => {
+    if (!order) return orderWhatsAppUrl;
+
+    const isLocalhost =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    const trackingBaseUrl = isLocalhost
+      ? window.location.origin
+      : (import.meta.env.VITE_FRONTEND_URL || 'https://a2-cravings.vercel.app');
+
+    const currentUrl = `${trackingBaseUrl}/track-order?orderId=${encodeURIComponent(order.orderNumber)}`;
+
+    let msg = `Assalam o Alaikum A2 Cravings! I would like to confirm my order:\n\n`;
+    msg += `📋 *ORDER ID:* #${order.orderNumber}\n`;
+    msg += `👤 *Customer Name:* ${order.customer?.name || 'Customer'}\n`;
+    if (order.customer?.phone) {
+      msg += `📞 *Phone:* ${order.customer.phone}\n`;
+    }
+    if (order.customer?.address) {
+      msg += `📍 *Delivery Address:* ${order.customer.address}\n`;
+    }
+    if (order.customer?.notes) {
+      msg += `📝 *Notes:* ${order.customer.notes}\n`;
+    }
+
+    msg += `\n🛒 *ORDER ITEMS:*\n`;
+    if (Array.isArray(order.items)) {
+      order.items.forEach((item) => {
+        const itemTotal = item.subtotal || item.price * item.quantity;
+        msg += `• ${item.quantity}x ${item.name} (Rs ${item.price}) = Rs ${itemTotal}\n`;
+      });
+    }
+
+    msg += `\n💰 *Total Amount:* Rs ${(order.totalAmount || 0).toLocaleString()}\n`;
+    msg += `🔗 *Live Tracking Link:* ${currentUrl}\n\n`;
+    msg += `Please confirm my order and share estimated delivery time. Thank you!`;
+
+    return getWhatsAppUrl(businessData.contact.whatsapp, msg);
+  };
+
   return (
     <div className="policy-page-wrapper">
       <SEO
@@ -381,9 +423,67 @@ export const TrackOrder = () => {
                 </div>
               )}
 
+              {/* ─── High-Visibility Prominent "Confirm on WhatsApp" Callout ─── */}
+              {order.status !== 'cancelled' && (
+                <div
+                  className="tracking-whatsapp-cta-card"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(37, 211, 102, 0.16) 0%, rgba(18, 140, 126, 0.22) 100%)',
+                    border: '1.5px solid rgba(37, 211, 102, 0.45)',
+                    borderRadius: '16px',
+                    padding: '1.4rem 1.8rem',
+                    margin: '1.75rem 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '1.5rem',
+                    flexWrap: 'wrap',
+                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+                  }}
+                >
+                  <div style={{ flex: '1 1 320px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem' }}>
+                      <FontAwesomeIcon icon={faWhatsapp} style={{ fontSize: '1.4rem', color: '#25D366' }} />
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                        Confirm Your Order on WhatsApp
+                      </h3>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.92rem', color: 'rgba(255, 255, 255, 0.85)', lineHeight: 1.5 }}>
+                      Speed up preparation! Tap below to send your structured order details to the kitchen team on WhatsApp.
+                    </p>
+                  </div>
+
+                  <a
+                    href={getConfirmationWhatsAppUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-whatsapp-confirm"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.75rem',
+                      background: '#25D366',
+                      color: '#0d1117',
+                      padding: '0.95rem 1.85rem',
+                      borderRadius: '30px',
+                      fontWeight: 800,
+                      fontSize: '1.05rem',
+                      textDecoration: 'none',
+                      boxShadow: '0 4px 20px rgba(37, 211, 102, 0.45)',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faWhatsapp} style={{ fontSize: '1.35rem' }} />
+                    <span>Confirm on WhatsApp</span>
+                  </a>
+                </div>
+              )}
+
               {/* ─── Safe Order Summary Grid ─── */}
               <div className="tracking-details-grid">
-                {/* Left Card: Customer & Status Info (Safe Masked) */}
+                {/* Left Card: Customer & Status Info */}
                 <div className="tracking-info-card">
                   <div className="tracking-card-header">
                     <FontAwesomeIcon icon={faReceipt} className="tracking-card-icon" />
@@ -402,10 +502,26 @@ export const TrackOrder = () => {
                     <span className="tracking-detail-value">{order.customer?.name || 'Customer'}</span>
                   </div>
 
-                  <div className="tracking-detail-row">
-                    <span className="tracking-detail-label">Contact Phone</span>
-                    <span className="tracking-detail-value">{order.customer?.phone || '••••••••'}</span>
-                  </div>
+                  {order.customer?.phone && (
+                    <div className="tracking-detail-row">
+                      <span className="tracking-detail-label">Contact Phone</span>
+                      <span className="tracking-detail-value">{order.customer.phone}</span>
+                    </div>
+                  )}
+
+                  {order.customer?.address && (
+                    <div className="tracking-detail-row">
+                      <span className="tracking-detail-label">Delivery Address</span>
+                      <span className="tracking-detail-value">{order.customer.address}</span>
+                    </div>
+                  )}
+
+                  {order.customer?.notes && (
+                    <div className="tracking-detail-row">
+                      <span className="tracking-detail-label">Instructions</span>
+                      <span className="tracking-detail-value">{order.customer.notes}</span>
+                    </div>
+                  )}
 
                   <div className="tracking-detail-row">
                     <span className="tracking-detail-label">Total Items</span>
@@ -413,13 +529,13 @@ export const TrackOrder = () => {
                   </div>
 
                   <a
-                    href={orderWhatsAppUrl}
+                    href={getConfirmationWhatsAppUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="tracking-help-cta"
                   >
                     <FontAwesomeIcon icon={faWhatsapp} />
-                    <span>Need Help? Chat on WhatsApp</span>
+                    <span>Send Order to WhatsApp</span>
                   </a>
                 </div>
 

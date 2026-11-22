@@ -47,6 +47,7 @@ export const CartDrawer = () => {
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [placedOrderSuccess, setPlacedOrderSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   // Close drawer on ESC key
   useEffect(() => {
@@ -127,12 +128,13 @@ export const CartDrawer = () => {
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
+    setSubmitError(null);
+
     if (!validateCheckout()) {
       return;
     }
 
     setIsSubmitting(true);
-    let orderNumber = null;
     try {
       // Record order in MongoDB backend
       const orderPayload = {
@@ -146,54 +148,25 @@ export const CartDrawer = () => {
           productId: item.id || item.slug,
           quantity: item.quantity,
         })),
-        source: 'whatsapp',
+        source: 'web',
       };
+
       const result = await createOrder(orderPayload);
       if (result && result.data && result.data.orderNumber) {
-        orderNumber = result.data.orderNumber;
+        const orderNumber = result.data.orderNumber;
+        // Order successfully created — clear cart, close drawer, redirect to tracking page
+        clearCart();
+        closeCart();
+        navigate(`/track-order?orderId=${encodeURIComponent(orderNumber)}`);
+        return;
+      } else {
+        throw new Error('Could not obtain order confirmation from server.');
       }
     } catch (apiErr) {
-      console.warn('Backend order recording skipped or failed, continuing with direct WhatsApp checkout:', apiErr.message);
+      console.error('Order creation failed:', apiErr);
+      setSubmitError('Could not place order. Please try again.');
     } finally {
       setIsSubmitting(false);
-    }
-
-    // Build structured multi-item WhatsApp order message
-    let message = `Assalam o Alaikum A2 Cravings! I would like to place an order:\n\n`;
-    if (orderNumber) {
-      message += `📋 *ORDER NUMBER:* #${orderNumber}\n\n`;
-    }
-    message += `🛒 *ORDER ITEMS:*\n`;
-    cart.forEach((item) => {
-      message += `• ${item.quantity}x ${item.name} (Rs ${item.price} each) = Rs ${item.price * item.quantity}\n`;
-    });
-
-    message += `\n💰 *Total Bill:* Rs ${totalPrice.toLocaleString()}\n`;
-    message += `👤 *Customer Name:* ${checkoutData.name.trim()}\n`;
-    message += `📞 *Phone Number:* ${checkoutData.phone.trim()}\n`;
-    message += `📍 *Delivery Address:* ${checkoutData.address.trim()}\n`;
-
-    if (checkoutData.instructions.trim()) {
-      message += `📝 *Instructions:* ${checkoutData.instructions.trim()}\n`;
-    }
-
-    message += `\nPlease confirm my order and share delivery time. Thank you!`;
-
-    const orderUrl = getWhatsAppUrl(businessData.contact.whatsapp, message);
-    window.open(orderUrl, '_blank', 'noopener,noreferrer');
-
-    if (orderNumber) {
-      // Order successfully created — clear cart, close drawer, redirect to tracking page
-      clearCart();
-      closeCart();
-      navigate(`/track-order?orderId=${encodeURIComponent(orderNumber)}`);
-    } else {
-      // Backend didn't return an order number (creation failed) — do NOT redirect!
-      setPlacedOrderSuccess({
-        orderNumber: null,
-        total: totalPrice,
-        whatsappUrl: orderUrl,
-      });
     }
   };
 
@@ -418,6 +391,25 @@ export const CartDrawer = () => {
                         className="cart-input"
                       />
                     </div>
+
+                    {submitError && (
+                      <div
+                        className="cart-error-banner"
+                        style={{
+                          color: '#ff4d4f',
+                          background: 'rgba(255, 77, 79, 0.12)',
+                          border: '1px solid rgba(255, 77, 79, 0.35)',
+                          borderRadius: '8px',
+                          padding: '0.65rem 0.85rem',
+                          fontSize: '0.85rem',
+                          marginTop: '0.75rem',
+                          textAlign: 'center',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {submitError}
+                      </div>
+                    )}
                   </form>
                 )}
               </div>
@@ -447,12 +439,12 @@ export const CartDrawer = () => {
                 {isSubmitting ? (
                   <>
                     <FontAwesomeIcon icon={faCircleNotch} spin className="btn-icon" />
-                    <span>Placing Order & Redirecting...</span>
+                    <span>Placing Order...</span>
                   </>
                 ) : (
                   <>
-                    <FontAwesomeIcon icon={faWhatsapp} className="btn-icon" />
-                    <span>Confirm Order on WhatsApp (Rs {totalPrice.toLocaleString()})</span>
+                    <FontAwesomeIcon icon={faCircleCheck} className="btn-icon" />
+                    <span>Confirm Order (Rs {totalPrice.toLocaleString()})</span>
                   </>
                 )}
               </button>
@@ -462,7 +454,7 @@ export const CartDrawer = () => {
                 className="btn btn-primary cart-checkout-btn"
                 onClick={() => setShowCheckoutForm(true)}
               >
-                <span>Proceed to Delivery & Checkout</span>
+                <span>Proceed to Checkout</span>
                 <FontAwesomeIcon icon={faArrowRight} />
               </button>
             )}

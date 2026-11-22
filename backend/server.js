@@ -1,34 +1,10 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const { connectDB, getDatabaseInfo } = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Sanitize MongoDB URI if credentials contain special characters that were not percent-encoded
-const sanitizeMongoUri = (uri) => {
-  if (!uri) return 'mongodb://127.0.0.1:27017/A2Cravings';
-  try {
-    if (uri.includes('://') && uri.includes('@')) {
-      const schemeEnd = uri.indexOf('://') + 3;
-      const atLast = uri.lastIndexOf('@');
-      const authPart = uri.substring(schemeEnd, atLast);
-      const colonIdx = authPart.indexOf(':');
-      if (colonIdx !== -1) {
-        const user = decodeURIComponent(authPart.substring(0, colonIdx));
-        const pass = decodeURIComponent(authPart.substring(colonIdx + 1));
-        const hostPart = uri.substring(atLast + 1);
-        return `${uri.substring(0, schemeEnd)}${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${hostPart}`;
-      }
-    }
-  } catch {
-    // Return original if parsing fails
-  }
-  return uri;
-};
-
-const MONGO_URI = sanitizeMongoUri(process.env.MONGO_URI);
 
 // ─── CORS Configuration ───────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -67,19 +43,14 @@ app.use(express.json());
 
 // ─── Health Check Endpoint ────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  const dbStateMap = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting',
-  };
-  const dbState = mongoose.connection.readyState;
+  const dbInfo = getDatabaseInfo();
 
   res.status(200).json({
     status: 'ok',
     server: 'running',
-    database: dbStateMap[dbState] || 'unknown',
-    environment: process.env.NODE_ENV || 'development',
+    database: dbInfo.status,
+    databaseName: dbInfo.databaseName,
+    environment: dbInfo.environment,
     corsOrigins: allowedOrigins,
     timestamp: new Date().toISOString(),
   });
@@ -113,10 +84,8 @@ app.use((err, req, res, next) => {
 });
 
 // ─── MongoDB Connection + Server Start ───────────────────────────────────────
-mongoose
-  .connect(MONGO_URI)
+connectDB()
   .then(() => {
-    console.log('✅ MongoDB connected successfully');
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);

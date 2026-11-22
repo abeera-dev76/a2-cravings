@@ -1,11 +1,30 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
-import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
-import { businessData } from '../data/businessData';
+import { faCheck, faCartPlus } from '@fortawesome/free-solid-svg-icons';
+import { useCart } from '../context/CartContext';
 
 export const ComboDeals = () => {
+  const { addToCart, openCart } = useCart();
+  const [addedId, setAddedId] = useState(null);
+
+  const handleAddComboToCart = (combo) => {
+    addToCart(
+      {
+        id: combo.id,
+        name: combo.name,
+        price: combo.price,
+        image: combo.image,
+        category: 'combos',
+      },
+      1
+    );
+    setAddedId(combo.id);
+    setTimeout(() => {
+      setAddedId(null);
+    }, 1800);
+    openCart();
+  };
+
   // Combos definition adhering strictly to requirements
   const regularCombos = [
     {
@@ -158,21 +177,17 @@ export const ComboDeals = () => {
                   </ul>
                 </div>
 
-                {/* WhatsApp Action Button */}
+                {/* Add to Cart Action Button */}
                 <div className="featured-combo-cta">
-                  <a
-                    href={getWhatsAppUrl(
-                      businessData.contact.whatsapp,
-                      WHATSAPP_MESSAGES.comboOrder(featuredCombo.name, featuredCombo.price)
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="combo-order-btn featured-btn"
-                    aria-label={`Order ${featuredCombo.name} for Rs ${featuredCombo.price} on WhatsApp`}
+                  <button
+                    type="button"
+                    onClick={() => handleAddComboToCart(featuredCombo)}
+                    className={`combo-order-btn featured-btn ${addedId === featuredCombo.id ? 'is-added' : ''}`}
+                    aria-label={`Add ${featuredCombo.name} to cart`}
                   >
-                    <FontAwesomeIcon icon={faWhatsapp} className="btn-icon" />
-                    <span>Order Combo on WhatsApp</span>
-                  </a>
+                    <FontAwesomeIcon icon={addedId === featuredCombo.id ? faCheck : faCartPlus} className="btn-icon" />
+                    <span>{addedId === featuredCombo.id ? 'Added to Cart!' : 'Add Siblings Combo to Cart'}</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -221,19 +236,15 @@ export const ComboDeals = () => {
                 </div>
 
                 <div className="combo-card-footer">
-                  <a
-                    href={getWhatsAppUrl(
-                      businessData.contact.whatsapp,
-                      WHATSAPP_MESSAGES.comboOrder(combo.name, combo.price)
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="combo-order-btn"
-                    aria-label={`Order ${combo.name} for Rs ${combo.price} on WhatsApp`}
+                  <button
+                    type="button"
+                    onClick={() => handleAddComboToCart(combo)}
+                    className={`combo-order-btn ${addedId === combo.id ? 'is-added' : ''}`}
+                    aria-label={`Add ${combo.name} to cart`}
                   >
-                    <FontAwesomeIcon icon={faWhatsapp} className="btn-icon" />
-                    <span>Order Combo</span>
-                  </a>
+                    <FontAwesomeIcon icon={addedId === combo.id ? faCheck : faCartPlus} className="btn-icon" />
+                    <span>{addedId === combo.id ? 'Added!' : 'Add to Cart'}</span>
+                  </button>
                 </div>
               </div>
             </CardWithTilt>

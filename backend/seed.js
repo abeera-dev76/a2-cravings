@@ -4,6 +4,7 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const { connectDB } = require('./config/db');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
 
@@ -242,8 +243,16 @@ const productsData = [
 
 const seedDatabase = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ Connected to MongoDB for seeding');
+    let customUri = null;
+    if (process.argv[2] === 'atlas' || process.argv[2] === 'prod') {
+      customUri = process.env.MONGODB_URI || process.env.MONGO_URI_ATLAS;
+      if (!customUri) {
+        throw new Error('No production Atlas URI found in MONGODB_URI or MONGO_URI_ATLAS');
+      }
+      console.log('Targeting production MongoDB Atlas database...');
+    }
+
+    await connectDB(customUri);
 
     // Clear existing data to avoid duplicates
     await Category.deleteMany({});
@@ -262,6 +271,7 @@ const seedDatabase = async () => {
     console.log('Categories:', insertedCategories.map(c => c.name).join(', '));
     console.log('Products:', insertedProducts.length, 'items');
 
+    await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
     console.error('❌ Seeding failed:', error.message);

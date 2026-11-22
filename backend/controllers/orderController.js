@@ -179,21 +179,11 @@ const createOrder = async (req, res) => {
  */
 const maskCustomerDataForPublic = (customer) => {
   if (!customer) return {};
-  const phone = String(customer.phone || '').trim();
-  const maskedPhone =
-    phone.length >= 6
-      ? `${phone.slice(0, 4)}*****${phone.slice(-2)}`
-      : '*******';
-
-  const nameParts = String(customer.name || '').trim().split(' ');
-  const maskedName =
-    nameParts.length > 1
-      ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
-      : customer.name;
-
   return {
-    name: maskedName,
-    phone: maskedPhone,
+    name: customer.name || 'Customer',
+    phone: customer.phone || '',
+    address: customer.address || '',
+    notes: customer.notes || '',
   };
 };
 

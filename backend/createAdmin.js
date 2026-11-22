@@ -11,16 +11,12 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const { connectDB } = require('./config/db');
 const Admin = require('./models/Admin');
 
 const createFirstAdmin = async () => {
   try {
-    const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD, MONGO_URI } = process.env;
-
-    if (!MONGO_URI) {
-      console.error('❌ Error: MONGO_URI is missing in .env file');
-      process.exit(1);
-    }
+    const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
 
     if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
       console.error('❌ Error: ADMIN_EMAIL and ADMIN_PASSWORD must be defined in your .env file');
@@ -28,8 +24,13 @@ const createFirstAdmin = async () => {
       process.exit(1);
     }
 
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ Connected to MongoDB');
+    let customUri = null;
+    if (process.argv[2] === 'atlas' || process.argv[2] === 'prod') {
+      customUri = process.env.MONGODB_URI || process.env.MONGO_URI_ATLAS;
+      console.log('Targeting production MongoDB Atlas database...');
+    }
+
+    await connectDB(customUri);
 
     const cleanEmail = ADMIN_EMAIL.trim().toLowerCase();
     const existingAdmin = await Admin.findOne({ email: cleanEmail });
