@@ -68,10 +68,21 @@ function getTargetUri() {
   };
 }
 
+// ─── Connection Cache for Serverless ──────────────────────────────────────────
+let cachedPromise = null;
+
 /**
  * Connects to MongoDB with production-grade configuration and event handling.
  */
 async function connectDB(customUri) {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (mongoose.connection.readyState === 2 && cachedPromise) {
+    return cachedPromise;
+  }
+
   let target;
   if (customUri) {
     target = { uri: sanitizeMongoUri(customUri), environment: 'custom', isCloud: customUri.startsWith('mongodb+srv') };
@@ -85,7 +96,8 @@ async function connectDB(customUri) {
   };
 
   try {
-    const conn = await mongoose.connect(target.uri, options);
+    cachedPromise = mongoose.connect(target.uri, options);
+    const conn = await cachedPromise;
 
     // Mask credentials for safe logging
     const maskedHost = target.uri.includes('@')
@@ -102,6 +114,7 @@ async function connectDB(customUri) {
 
     mongoose.connection.on('disconnected', () => {
       console.warn('⚠️  MongoDB disconnected. Attempting automatic reconnection...');
+      cachedPromise = null;
     });
 
     mongoose.connection.on('reconnected', () => {
@@ -110,6 +123,7 @@ async function connectDB(customUri) {
 
     return conn;
   } catch (error) {
+    cachedPromise = null;
     console.error(`❌ MongoDB connection failed (${target.environment}):`, error.message);
     throw error;
   }

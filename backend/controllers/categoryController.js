@@ -16,6 +16,7 @@ const getAllCategories = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while fetching categories',
+      error: error.message,
     });
   }
 };

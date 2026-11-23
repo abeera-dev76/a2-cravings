@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 const { connectDB, getDatabaseInfo } = require('./config/db');
@@ -50,6 +51,27 @@ app.use((req, res, next) => {
     req.url = realPath;
   }
   next();
+});
+
+// ─── Database Readiness Middleware (Crucial for Vercel Serverless) ─────────────
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health' || req.path === '/health' || req.path === '/') {
+    return next();
+  }
+
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (err) {
+    console.error('❌ Database connection middleware error:', err.message);
+    res.status(503).json({
+      success: false,
+      message: 'Database connection failed',
+      error: err.message,
+    });
+  }
 });
 
 // ─── Health Check Endpoint ────────────────────────────────────────────────────

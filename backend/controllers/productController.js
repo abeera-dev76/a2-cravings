@@ -23,6 +23,7 @@ const getAllProducts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while fetching products',
+      error: error.message,
     });
   }
 };
