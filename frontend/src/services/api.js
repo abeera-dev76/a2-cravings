@@ -15,10 +15,15 @@ const getApiBaseUrl = () => {
     return url;
   }
 
-  if (import.meta.env.PROD && typeof window !== 'undefined') {
-    console.warn(
-      '[A2 CRAVINGS] VITE_API_URL is not configured in production environment variables. Falling back to http://localhost:5000/api.'
-    );
+  // If in production mode or deployed on Vercel/cloud, use live serverless backend
+  if (
+    import.meta.env.PROD ||
+    (typeof window !== 'undefined' &&
+      (window.location.hostname.includes('vercel.app') ||
+        window.location.hostname.includes('onrender.com') ||
+        (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')))
+  ) {
+    return 'https://a2-cravings-7am1.vercel.app/api';
   }
 
   return 'http://localhost:5000/api';
