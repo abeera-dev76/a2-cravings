@@ -165,7 +165,7 @@ const productsData = [
     price: 270,
     badge: '',
     description: 'Aromatic Karachi-style spiced biryani cooked with tender spiced potatoes and rich saffron aroma.',
-    image: '/images/biryani/aalu-biryani.png',
+    image: '/images/products/aalu-biryani.png',
     fallbackImage: '',
     alt: 'Aalu Biryani - Homemade authentic potato biryani Rawalpindi',
   },

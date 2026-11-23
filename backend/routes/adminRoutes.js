@@ -15,6 +15,17 @@ const {
   updateDeliveryArea,
   deleteDeliveryArea,
 } = require('../controllers/deliveryAreaController');
+const {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  toggleProductAvailability,
+} = require('../controllers/productController');
+const {
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} = require('../controllers/categoryController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Public route: Admin login
@@ -24,6 +35,17 @@ router.post('/login', loginAdmin);
 router.get('/me', protect, getAdminProfile);
 router.get('/orders', protect, getAdminOrders);
 router.patch('/orders/:orderId/status', protect, updateOrderStatus);
+
+// Admin Product Management CRUD (Requires valid JWT Bearer token)
+router.post('/products', protect, createProduct);
+router.put('/products/:id', protect, updateProduct);
+router.delete('/products/:id', protect, deleteProduct);
+router.patch('/products/:id/toggle-availability', protect, toggleProductAvailability);
+
+// Admin Category Management CRUD (Requires valid JWT Bearer token)
+router.post('/categories', protect, createCategory);
+router.put('/categories/:id', protect, updateCategory);
+router.delete('/categories/:id', protect, deleteCategory);
 
 // Admin Delivery Areas & Charges CRUD (Requires valid JWT Bearer token)
 router.get('/delivery-areas', protect, getAllDeliveryAreasAdmin);

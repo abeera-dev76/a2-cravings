@@ -79,7 +79,7 @@ export const AdminLogin = () => {
                 id="admin-email"
                 type="email"
                 className="admin-input"
-                placeholder="admin@a2cravings.com"
+                placeholder="Enter admin email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"

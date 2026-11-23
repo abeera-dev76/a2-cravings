@@ -697,6 +697,221 @@ export const deleteAdminDeliveryArea = async (areaId) => {
   return data;
 };
 
+// ─── ADMIN PRODUCT MANAGEMENT ───────────────────────────────────────────────
+
+/**
+ * Fetch all products for admin, including unavailable ones.
+ */
+export const fetchAdminProducts = async (category = 'all') => {
+  let url = `${API_BASE_URL}/products?includeUnavailable=true`;
+  if (category && category !== 'all') {
+    url += `&category=${encodeURIComponent(category)}`;
+  }
+
+  const res = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch products for admin.');
+  }
+
+  return data.data.map(normalizeProduct);
+};
+
+/**
+ * Admin: Create a new product.
+ */
+export const createAdminProduct = async (payload) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to create product.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Update an existing product.
+ */
+export const updateAdminProduct = async (productId, payload) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/products/${encodeURIComponent(productId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update product.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Delete a product.
+ */
+export const deleteAdminProduct = async (productId) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/products/${encodeURIComponent(productId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to delete product.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Toggle availability of a product.
+ */
+export const toggleAdminProductAvailability = async (productId) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/products/${encodeURIComponent(productId)}/toggle-availability`, {
+    method: 'PATCH',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to toggle product status.');
+  }
+
+  return data;
+};
+
+// ─── ADMIN CATEGORY MANAGEMENT ──────────────────────────────────────────────
+
+/**
+ * Fetch all categories for admin, including inactive ones.
+ */
+export const fetchAdminCategories = async () => {
+  const res = await fetch(`${API_BASE_URL}/categories?all=true`, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch categories.');
+  }
+
+  return data.data.map(normalizeCategory);
+};
+
+/**
+ * Admin: Create a new category.
+ */
+export const createAdminCategory = async (payload) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/categories`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to create category.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Update a category.
+ */
+export const updateAdminCategory = async (categoryId, payload) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/categories/${encodeURIComponent(categoryId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update category.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Delete a category.
+ */
+export const deleteAdminCategory = async (categoryId, force = false) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const url = `${API_BASE_URL}/admin/categories/${encodeURIComponent(categoryId)}${force ? '?force=true' : ''}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to delete category.');
+  }
+
+  return data;
+};
+
 export default {
   fetchCategories,
   fetchProducts,
@@ -726,6 +941,15 @@ export default {
   createAdminDeliveryArea,
   updateAdminDeliveryArea,
   deleteAdminDeliveryArea,
+  fetchAdminProducts,
+  createAdminProduct,
+  updateAdminProduct,
+  deleteAdminProduct,
+  toggleAdminProductAvailability,
+  fetchAdminCategories,
+  createAdminCategory,
+  updateAdminCategory,
+  deleteAdminCategory,
   checkApiHealth,
   API_BASE_URL,
 };

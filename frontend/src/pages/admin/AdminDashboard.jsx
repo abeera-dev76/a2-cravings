@@ -43,6 +43,15 @@ import {
   fetchAdminProfile,
   fetchProducts,
   fetchCategories,
+  fetchAdminProducts,
+  createAdminProduct,
+  updateAdminProduct,
+  deleteAdminProduct,
+  toggleAdminProductAvailability,
+  fetchAdminCategories,
+  createAdminCategory,
+  updateAdminCategory,
+  deleteAdminCategory,
   fetchAdminUserStats,
   fetchAdminUsers,
   fetchAdminUserById,
@@ -76,6 +85,40 @@ export const AdminDashboard = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [menuFilterCategory, setMenuFilterCategory] = useState('all');
   const [menuSearch, setMenuSearch] = useState('');
+
+  // Product CRUD State
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    category: '',
+    price: '',
+    description: '',
+    image: '',
+    badge: '',
+    isAvailable: true,
+    order: 0,
+  });
+  const [imageCompressing, setImageCompressing] = useState(false);
+  const [productSubmitting, setProductSubmitting] = useState(false);
+  const [productModalError, setProductModalError] = useState(null);
+  const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(false);
+  const [togglingProductId, setTogglingProductId] = useState(null);
+
+  // Category CRUD State
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    order: 0,
+    isActive: true,
+  });
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [categoryModalError, setCategoryModalError] = useState(null);
+  const [deleteConfirmCategory, setDeleteConfirmCategory] = useState(null);
+  const [categoryDeleteWarning, setCategoryDeleteWarning] = useState(null);
+  const [deletingCategory, setDeletingCategory] = useState(false);
 
   // Order Details Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -160,13 +203,13 @@ export const AdminDashboard = () => {
     }
   }, []);
 
-  // 4. Load live products and categories from MongoDB
+  // 4. Load live products and categories from MongoDB (including unavailable for admin)
   const loadMenuData = useCallback(async () => {
     setLoadingProducts(true);
     try {
       const [prods, cats] = await Promise.all([
-        fetchProducts('all'),
-        fetchCategories(),
+        fetchAdminProducts('all'),
+        fetchAdminCategories(),
       ]);
       setProductsList(prods || []);
       setCategoriesList(cats || []);
@@ -308,6 +351,251 @@ export const AdminDashboard = () => {
       alert(`Failed to delete area: ${err.message}`);
     } finally {
       setDeletingArea(false);
+    }
+  };
+
+  // ─── PRODUCT CRUD HANDLERS ────────────────────────────────────────────────
+  const handleOpenAddProduct = () => {
+    setEditingProduct(null);
+    const validCats = categoriesList.filter((c) => c.slug && c.slug !== 'all');
+    setProductFormData({
+      name: '',
+      category: validCats[0]?.slug || 'pasta',
+      price: '',
+      description: '',
+      image: '',
+      badge: '',
+      isAvailable: true,
+      order: 0,
+    });
+    setProductModalError(null);
+    setProductModalOpen(true);
+  };
+
+  const handleOpenEditProduct = (prod) => {
+    setEditingProduct(prod);
+    setProductFormData({
+      name: prod.name || '',
+      category: prod.category || 'pasta',
+      price: prod.price !== undefined ? String(prod.price) : '',
+      description: prod.description || '',
+      image: prod.image || '',
+      badge: prod.badge || '',
+      isAvailable: prod.isAvailable !== false,
+      order: prod.order !== undefined ? Number(prod.order) : 0,
+    });
+    setProductModalError(null);
+    setProductModalOpen(true);
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.match(/^image\/(jpeg|png|webp|jpg)$/)) {
+      setProductModalError('Please upload a valid image file (JPG, PNG, or WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProductModalError('Image file is too large (max 5MB).');
+      return;
+    }
+
+    setImageCompressing(true);
+    setProductModalError(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setProductFormData((prev) => ({ ...prev, image: dataUrl }));
+        setImageCompressing(false);
+      };
+      img.onerror = () => {
+        setProductModalError('Failed to process image file.');
+        setImageCompressing(false);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProduct = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!productFormData.name.trim()) {
+      setProductModalError('Product name is required.');
+      return;
+    }
+    if (!productFormData.category.trim()) {
+      setProductModalError('Please select a category.');
+      return;
+    }
+    const priceNum = Number(productFormData.price);
+    if (isNaN(priceNum) || priceNum < 0 || productFormData.price === '') {
+      setProductModalError('Please enter a valid price in PKR (0 or higher).');
+      return;
+    }
+
+    setProductSubmitting(true);
+    setProductModalError(null);
+
+    try {
+      const payload = {
+        name: productFormData.name.trim(),
+        category: productFormData.category.trim().toLowerCase(),
+        price: Math.round(priceNum),
+        description: productFormData.description.trim(),
+        image: productFormData.image.trim(),
+        badge: productFormData.badge.trim(),
+        isAvailable: Boolean(productFormData.isAvailable),
+        order: Number(productFormData.order) || 0,
+      };
+
+      if (editingProduct) {
+        await updateAdminProduct(editingProduct._id || editingProduct.slug, payload);
+      } else {
+        await createAdminProduct(payload);
+      }
+
+      setProductModalOpen(false);
+      await loadMenuData();
+    } catch (err) {
+      setProductModalError(err.message || 'Failed to save product.');
+    } finally {
+      setProductSubmitting(false);
+    }
+  };
+
+  const handleToggleProductAvailability = async (prod) => {
+    const id = prod._id || prod.slug;
+    setTogglingProductId(id);
+    try {
+      await toggleAdminProductAvailability(id);
+      await loadMenuData();
+    } catch (err) {
+      alert(`Failed to update product availability: ${err.message}`);
+    } finally {
+      setTogglingProductId(null);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!deleteConfirmProduct) return;
+    setDeletingProduct(true);
+    try {
+      await deleteAdminProduct(deleteConfirmProduct._id || deleteConfirmProduct.slug);
+      setDeleteConfirmProduct(null);
+      await loadMenuData();
+    } catch (err) {
+      alert(`Failed to delete product: ${err.message}`);
+    } finally {
+      setDeletingProduct(false);
+    }
+  };
+
+  // ─── CATEGORY CRUD HANDLERS ───────────────────────────────────────────────
+  const handleOpenAddCategory = () => {
+    setEditingCategory(null);
+    setCategoryFormData({
+      name: '',
+      order: categoriesList.length + 1,
+      isActive: true,
+    });
+    setCategoryModalError(null);
+    setCategoryModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (cat) => {
+    setEditingCategory(cat);
+    setCategoryFormData({
+      name: cat.name || '',
+      order: cat.order !== undefined ? Number(cat.order) : 0,
+      isActive: cat.isActive !== false,
+    });
+    setCategoryModalError(null);
+    setCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!categoryFormData.name.trim()) {
+      setCategoryModalError('Category name is required.');
+      return;
+    }
+
+    setCategorySubmitting(true);
+    setCategoryModalError(null);
+
+    try {
+      const payload = {
+        name: categoryFormData.name.trim(),
+        order: Number(categoryFormData.order) || 0,
+        isActive: Boolean(categoryFormData.isActive),
+      };
+
+      if (editingCategory) {
+        await updateAdminCategory(editingCategory._id || editingCategory.slug, payload);
+      } else {
+        await createAdminCategory(payload);
+      }
+
+      setCategoryModalOpen(false);
+      await loadMenuData();
+    } catch (err) {
+      setCategoryModalError(err.message || 'Failed to save category.');
+    } finally {
+      setCategorySubmitting(false);
+    }
+  };
+
+  const handleToggleCategoryActive = async (cat) => {
+    try {
+      await updateAdminCategory(cat._id || cat.slug, { isActive: !cat.isActive });
+      await loadMenuData();
+    } catch (err) {
+      alert(`Failed to update category status: ${err.message}`);
+    }
+  };
+
+  const handleDeleteCategory = async (force = false) => {
+    if (!deleteConfirmCategory) return;
+    setDeletingCategory(true);
+    setCategoryDeleteWarning(null);
+    try {
+      await deleteAdminCategory(deleteConfirmCategory._id || deleteConfirmCategory.slug, force);
+      setDeleteConfirmCategory(null);
+      await loadMenuData();
+    } catch (err) {
+      if (err.message && err.message.includes('contains') && !force) {
+        setCategoryDeleteWarning(err.message);
+      } else {
+        alert(`Failed to delete category: ${err.message}`);
+        setDeleteConfirmCategory(null);
+      }
+    } finally {
+      setDeletingCategory(false);
     }
   };
 
@@ -1527,15 +1815,39 @@ export const AdminDashboard = () => {
                 ))}
               </div>
 
-              <div className="admin-search-box">
-                <FontAwesomeIcon icon={faMagnifyingGlass} className="admin-search-icon" />
-                <input
-                  type="text"
-                  className="admin-search-input"
-                  placeholder="Search dishes by name..."
-                  value={menuSearch}
-                  onChange={(e) => setMenuSearch(e.target.value)}
-                />
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="admin-search-box">
+                  <FontAwesomeIcon icon={faMagnifyingGlass} className="admin-search-icon" />
+                  <input
+                    type="text"
+                    className="admin-search-input"
+                    placeholder="Search dishes by name..."
+                    value={menuSearch}
+                    onChange={(e) => setMenuSearch(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddProduct}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.65rem 1.1rem',
+                    background: '#FF8C00',
+                    color: '#0A0A0A',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span>Add New Product</span>
+                </button>
               </div>
             </div>
 
@@ -1564,6 +1876,7 @@ export const AdminDashboard = () => {
                         <th>Price</th>
                         <th>Badge</th>
                         <th>Availability</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1571,7 +1884,7 @@ export const AdminDashboard = () => {
                         <tr key={p.slug || p._id || p.id}>
                           <td>
                             <img
-                              src={p.image || p.fallbackImage}
+                              src={p.image || p.fallbackImage || '/images/hero/hero-food.png'}
                               alt={p.name}
                               className="admin-product-thumb"
                               onError={(e) => { e.currentTarget.src = '/images/hero/hero-food.png'; }}
@@ -1580,7 +1893,7 @@ export const AdminDashboard = () => {
                           <td>
                             <strong style={{ color: '#FFFFFF' }}>{p.name}</strong>
                             <p style={{ margin: '0.2rem 0 0', fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>
-                              {p.description ? p.description.slice(0, 70) + '...' : ''}
+                              {p.description ? p.description.slice(0, 70) + (p.description.length > 70 ? '...' : '') : ''}
                             </p>
                           </td>
                           <td>
@@ -1601,9 +1914,66 @@ export const AdminDashboard = () => {
                             )}
                           </td>
                           <td>
-                            <span style={{ color: '#10B981', fontWeight: 600, fontSize: '0.82rem' }}>
-                              ● Active (Ready)
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProductAvailability(p)}
+                              disabled={togglingProductId === (p._id || p.slug)}
+                              title={p.isAvailable ? 'Click to mark unavailable' : 'Click to mark available'}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                color: p.isAvailable ? '#10B981' : '#EF4444',
+                                fontWeight: 600,
+                                fontSize: '0.88rem',
+                              }}
+                            >
+                              <FontAwesomeIcon icon={p.isAvailable ? faToggleOn : faToggleOff} size="lg" />
+                              <span>{p.isAvailable ? 'Available' : 'Unavailable'}</span>
+                            </button>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className="admin-action-btn"
+                                onClick={() => handleOpenEditProduct(p)}
+                                title="Edit Product"
+                                style={{
+                                  background: 'rgba(255, 140, 0, 0.12)',
+                                  color: '#FF8C00',
+                                  border: '1px solid rgba(255, 140, 0, 0.3)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faPenToSquare} style={{ marginRight: '0.35rem' }} />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-action-btn"
+                                onClick={() => setDeleteConfirmProduct(p)}
+                                title="Delete Product"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.12)',
+                                  color: '#EF4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.35rem' }} />
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1619,11 +1989,33 @@ export const AdminDashboard = () => {
         {activeTab === 'categories' && (
           <div className="admin-view-content">
             <div className="admin-table-card">
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#FFFFFF' }}>Active Food Categories</h2>
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
-                  Categories synced from MongoDB database
-                </p>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#FFFFFF' }}>Active Food Categories</h2>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+                    Categories synced from MongoDB database
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddCategory}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.65rem 1.1rem',
+                    background: '#FF8C00',
+                    color: '#0A0A0A',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span>Add New Category</span>
+                </button>
               </div>
 
               {realCategoriesCount === 0 ? (
@@ -1641,6 +2033,7 @@ export const AdminDashboard = () => {
                         <th>Slug Identifier</th>
                         <th>Display Order</th>
                         <th>Status</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1648,9 +2041,70 @@ export const AdminDashboard = () => {
                         <tr key={cat.slug || cat._id || idx}>
                           <td><strong style={{ color: '#FFFFFF' }}>{cat.name}</strong></td>
                           <td><code style={{ color: '#FF8C00' }}>{cat.slug || cat.id}</code></td>
-                          <td>Priority #{cat.order || idx + 1}</td>
+                          <td>Priority #{cat.order !== undefined ? cat.order : idx + 1}</td>
                           <td>
-                            <span style={{ color: '#10B981', fontWeight: 600 }}>● Active</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCategoryActive(cat)}
+                              title={cat.isActive !== false ? 'Click to deactivate' : 'Click to activate'}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                color: cat.isActive !== false ? '#10B981' : 'rgba(255,255,255,0.4)',
+                                fontWeight: 600,
+                                fontSize: '0.88rem',
+                              }}
+                            >
+                              <FontAwesomeIcon icon={cat.isActive !== false ? faToggleOn : faToggleOff} size="lg" />
+                              <span>{cat.isActive !== false ? 'Active' : 'Disabled'}</span>
+                            </button>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className="admin-action-btn"
+                                onClick={() => handleOpenEditCategory(cat)}
+                                title="Edit Category"
+                                style={{
+                                  background: 'rgba(255, 140, 0, 0.12)',
+                                  color: '#FF8C00',
+                                  border: '1px solid rgba(255, 140, 0, 0.3)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faPenToSquare} style={{ marginRight: '0.35rem' }} />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-action-btn"
+                                onClick={() => {
+                                  setCategoryDeleteWarning(null);
+                                  setDeleteConfirmCategory(cat);
+                                }}
+                                title="Delete Category"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.12)',
+                                  color: '#EF4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.35rem' }} />
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2288,6 +2742,599 @@ export const AdminDashboard = () => {
                   {deletingArea && <FontAwesomeIcon icon={faCircleNotch} spin />}
                   <span>Delete Area</span>
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add / Edit Product Modal ─── */}
+      {productModalOpen && (
+        <div className="admin-modal-overlay" onClick={() => setProductModalOpen(false)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">
+                {editingProduct ? (
+                  <>Edit Dish: <span style={{ color: '#FF8C00' }}>{editingProduct.name}</span></>
+                ) : (
+                  <>Add New <span style={{ color: '#FF8C00' }}>Menu Dish</span></>
+                )}
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setProductModalOpen(false)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProduct} className="admin-modal-body">
+              {productModalError && (
+                <div className="admin-toast error" style={{ marginBottom: '1rem' }}>
+                  {productModalError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Image Upload & Preview Section */}
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#FF8C00', fontWeight: 600, marginBottom: '0.5rem' }}>
+                    Dish Photograph (Production-Safe Image Storage)
+                  </label>
+                  
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ width: '84px', height: '84px', borderRadius: '8px', overflow: 'hidden', background: '#111111', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {productFormData.image ? (
+                        <img
+                          src={productFormData.image}
+                          alt="Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.currentTarget.src = '/images/hero/hero-food.png'; }}
+                        />
+                      ) : (
+                        <FontAwesomeIcon icon={faUtensils} style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1.75rem' }} />
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <label
+                          style={{
+                            padding: '0.5rem 0.9rem',
+                            background: 'rgba(255,140,0,0.15)',
+                            color: '#FF8C00',
+                            border: '1px solid rgba(255,140,0,0.3)',
+                            borderRadius: '6px',
+                            fontSize: '0.82rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faPlus} />
+                          <span>Upload From Computer</span>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp"
+                            onChange={handleImageFileChange}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                        {productFormData.image && (
+                          <button
+                            type="button"
+                            onClick={() => setProductFormData((prev) => ({ ...prev, image: '' }))}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: 'rgba(255,255,255,0.08)',
+                              color: 'rgba(255,255,255,0.7)',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      {imageCompressing ? (
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#FF8C00' }}>
+                          <FontAwesomeIcon icon={faCircleNotch} spin style={{ marginRight: '0.35rem' }} />
+                          Optimizing image for fast production loading...
+                        </p>
+                      ) : (
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>
+                          Supports JPG, PNG, WebP. Automatically optimized & saved to MongoDB Atlas.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Optional manual URL input */}
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Or enter image URL / path (e.g. /images/products/dish.png)"
+                      value={productFormData.image}
+                      onChange={(e) => setProductFormData({ ...productFormData, image: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem 0.75rem',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '6px',
+                        color: 'rgba(255,255,255,0.85)',
+                        fontSize: '0.82rem',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Name & Category */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                      Dish Name <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Chicken Malai Boti Pasta"
+                      value={productFormData.name}
+                      onChange={(e) => setProductFormData({ ...productFormData, name: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontSize: '0.92rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                      Category <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <select
+                      value={productFormData.category}
+                      onChange={(e) => setProductFormData({ ...productFormData, category: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        background: '#1F1F1F',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontSize: '0.92rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {categoriesList
+                        .filter((c) => (c.slug || c.id) && (c.slug || c.id) !== 'all')
+                        .map((c) => (
+                          <option key={c.slug || c.id} value={c.slug || c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Price & Badge */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                      Price in PKR <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="10"
+                      placeholder="e.g. 550"
+                      value={productFormData.price}
+                      onChange={(e) => setProductFormData({ ...productFormData, price: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontSize: '0.92rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                      Highlight Badge
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Popular, Chef Special, Bestseller"
+                      value={productFormData.badge}
+                      onChange={(e) => setProductFormData({ ...productFormData, badge: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontSize: '0.92rem',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                    Dish Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Appetizing description of ingredients, seasoning, and preparation..."
+                    value={productFormData.description}
+                    onChange={(e) => setProductFormData({ ...productFormData, description: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.92rem',
+                      resize: 'vertical',
+                    }}
+                  />
+                </div>
+
+                {/* Availability Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+                  <input
+                    type="checkbox"
+                    id="prod-is-available"
+                    checked={productFormData.isAvailable}
+                    onChange={(e) => setProductFormData({ ...productFormData, isAvailable: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#FF8C00', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="prod-is-available" style={{ fontSize: '0.9rem', color: '#FFFFFF', cursor: 'pointer' }}>
+                    Available for customer ordering (Uncheck to mark Out of Stock)
+                  </label>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setProductModalOpen(false)}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={productSubmitting || imageCompressing}
+                    style={{
+                      padding: '0.6rem 1.4rem',
+                      borderRadius: '8px',
+                      background: '#FF8C00',
+                      color: '#0A0A0A',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: productSubmitting || imageCompressing ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {productSubmitting && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                    <span>{editingProduct ? 'Save Dish Changes' : 'Create Menu Product'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delete Product Confirmation Modal ─── */}
+      {deleteConfirmProduct && (
+        <div className="admin-modal-overlay" onClick={() => setDeleteConfirmProduct(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title" style={{ color: '#EF4444' }}>
+                <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.5rem' }} />
+                Delete Menu Product?
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setDeleteConfirmProduct(null)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body">
+              <p style={{ color: 'rgba(255,255,255,0.85)', margin: '0 0 1rem', lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete <strong style={{ color: '#FF8C00' }}>"{deleteConfirmProduct.name}"</strong>?
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: '0 0 1.5rem' }}>
+                This product will be removed from the customer menu immediately. Existing order history will preserve the recorded item details.
+              </p>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmProduct(null)}
+                  style={{
+                    padding: '0.6rem 1.2rem',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingProduct}
+                  onClick={handleDeleteProduct}
+                  style={{
+                    padding: '0.6rem 1.3rem',
+                    borderRadius: '8px',
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: deletingProduct ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  {deletingProduct && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                  <span>Delete Product</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add / Edit Category Modal ─── */}
+      {categoryModalOpen && (
+        <div className="admin-modal-overlay" onClick={() => setCategoryModalOpen(false)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">
+                {editingCategory ? (
+                  <>Edit Category: <span style={{ color: '#FF8C00' }}>{editingCategory.name}</span></>
+                ) : (
+                  <>Add New <span style={{ color: '#FF8C00' }}>Category</span></>
+                )}
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setCategoryModalOpen(false)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} className="admin-modal-body">
+              {categoryModalError && (
+                <div className="admin-toast error" style={{ marginBottom: '1rem' }}>
+                  {categoryModalError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                    Category Name <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Burgers, Beverages, Desserts"
+                    value={categoryFormData.name}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.92rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                    Display Order Priority (Lower = Appears first)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 1, 2, 3"
+                    value={categoryFormData.order}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, order: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.92rem',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+                  <input
+                    type="checkbox"
+                    id="cat-is-active"
+                    checked={categoryFormData.isActive}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, isActive: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#FF8C00', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="cat-is-active" style={{ fontSize: '0.9rem', color: '#FFFFFF', cursor: 'pointer' }}>
+                    Active category (Displayed in customer menu filter)
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCategoryModalOpen(false)}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={categorySubmitting}
+                    style={{
+                      padding: '0.6rem 1.4rem',
+                      borderRadius: '8px',
+                      background: '#FF8C00',
+                      color: '#0A0A0A',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: categorySubmitting ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {categorySubmitting && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                    <span>{editingCategory ? 'Save Category' : 'Create Category'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delete Category Confirmation Modal ─── */}
+      {deleteConfirmCategory && (
+        <div className="admin-modal-overlay" onClick={() => setDeleteConfirmCategory(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title" style={{ color: '#EF4444' }}>
+                <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.5rem' }} />
+                Delete Category?
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setDeleteConfirmCategory(null)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body">
+              <p style={{ color: 'rgba(255,255,255,0.85)', margin: '0 0 1rem', lineHeight: 1.5 }}>
+                Are you sure you want to delete category <strong style={{ color: '#FF8C00' }}>"{deleteConfirmCategory.name}"</strong>?
+              </p>
+
+              {categoryDeleteWarning && (
+                <div style={{ padding: '0.85rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '8px', color: '#FCA5A5', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                  <strong>Safety Safeguard:</strong> {categoryDeleteWarning}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmCategory(null)}
+                  style={{
+                    padding: '0.6rem 1.2rem',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                {categoryDeleteWarning ? (
+                  <button
+                    type="button"
+                    disabled={deletingCategory}
+                    onClick={() => handleDeleteCategory(true)}
+                    style={{
+                      padding: '0.6rem 1.3rem',
+                      borderRadius: '8px',
+                      background: '#DC2626',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: deletingCategory ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {deletingCategory && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                    <span>Force Delete Anyway</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={deletingCategory}
+                    onClick={() => handleDeleteCategory(false)}
+                    style={{
+                      padding: '0.6rem 1.3rem',
+                      borderRadius: '8px',
+                      background: '#EF4444',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: deletingCategory ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {deletingCategory && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                    <span>Delete Category</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

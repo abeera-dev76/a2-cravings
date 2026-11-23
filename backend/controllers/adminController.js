@@ -3,11 +3,15 @@ const Admin = require('../models/Admin');
 const Order = require('../models/Order');
 const User = require('../models/User');
 
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'TVdITBjLOYesIA3Qd25SuKADnLOkRa4nR00FIowgcV28mmBNXOMkmO9StHrMT7PSzebkh1XTnd9Q6nJCGFT0DV';
+
 /**
  * Generate JWT Token helper
  */
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+  return jwt.sign({ id, role }, JWT_SECRET, {
     expiresIn: '24h',
   });
 };

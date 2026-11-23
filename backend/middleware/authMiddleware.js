@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'TVdITBjLOYesIA3Qd25SuKADnLOkRa4nR00FIowgcV28mmBNXOMkmO9StHrMT7PSzebkh1XTnd9Q6nJCGFT0DV';
+
 /**
  * Protect middleware:
  * Verifies JWT token from Authorization header (Bearer <token>).
@@ -24,7 +28,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Fetch admin from database to ensure account is active and still exists
     const admin = await Admin.findById(decoded.id).select('-password');

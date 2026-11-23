@@ -61,7 +61,7 @@ export const FoodCard = ({ item }) => {
             <source srcSet={item.image} type="image/webp" />
           )}
           <img
-            src={item.fallbackImage || item.image}
+            src={item.image || item.fallbackImage || '/images/hero/hero-food.png'}
             alt={item.alt || `${item.name} - A2 Cravings Rawalpindi`}
             className="food-card-image"
             loading="lazy"
@@ -92,12 +92,14 @@ export const FoodCard = ({ item }) => {
         <div className="food-card-footer">
           <button
             type="button"
-            className={`food-card-cart-btn ${isAdded ? 'is-added' : ''}`}
-            onClick={handleAddToCart}
-            aria-label={`Add ${item.name} to cart`}
+            className={`food-card-cart-btn ${isAdded ? 'is-added' : ''} ${item.isAvailable === false ? 'is-disabled' : ''}`}
+            onClick={item.isAvailable === false ? undefined : handleAddToCart}
+            disabled={item.isAvailable === false}
+            aria-label={item.isAvailable === false ? `${item.name} is currently unavailable` : `Add ${item.name} to cart`}
+            style={item.isAvailable === false ? { opacity: 0.5, cursor: 'not-allowed', background: '#333333', color: '#999999' } : {}}
           >
             <FontAwesomeIcon icon={isAdded ? faCheck : faCartPlus} className="btn-icon" />
-            <span>{isAdded ? 'Added!' : 'Add to Cart'}</span>
+            <span>{item.isAvailable === false ? 'Out of Stock' : isAdded ? 'Added!' : 'Add to Cart'}</span>
           </button>
         </div>
       </div>
