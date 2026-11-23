@@ -26,7 +26,13 @@ import {
   faCircleNotch,
   faArrowRight,
   faUser,
-  faCalendarDays
+  faCalendarDays,
+  faPlus,
+  faPenToSquare,
+  faTrashCan,
+  faLocationDot,
+  faToggleOn,
+  faToggleOff
 } from '@fortawesome/free-solid-svg-icons';
 import {
   getAdminToken,
@@ -39,7 +45,11 @@ import {
   fetchCategories,
   fetchAdminUserStats,
   fetchAdminUsers,
-  fetchAdminUserById
+  fetchAdminUserById,
+  fetchAdminDeliveryAreas,
+  createAdminDeliveryArea,
+  updateAdminDeliveryArea,
+  deleteAdminDeliveryArea
 } from '../../services/api';
 import { navigate } from '../../utils/navigation';
 import './admin.css';
@@ -84,6 +94,26 @@ export const AdminDashboard = () => {
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [loadingUserDetail, setLoadingUserDetail] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Delivery Areas State (MongoDB Delivery Areas Management)
+  const [deliveryAreas, setDeliveryAreas] = useState([]);
+  const [loadingDeliveryAreas, setLoadingDeliveryAreas] = useState(false);
+  const [deliveryAreasError, setDeliveryAreasError] = useState(null);
+  const [areaSearch, setAreaSearch] = useState('');
+  const [areaStatusFilter, setAreaStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [areaModalOpen, setAreaModalOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState(null);
+  const [areaFormData, setAreaFormData] = useState({
+    name: '',
+    deliveryFee: '',
+    minOrderAmount: '',
+    estimatedTime: '30-45 mins',
+    isActive: true,
+  });
+  const [areaSubmitting, setAreaSubmitting] = useState(false);
+  const [areaModalError, setAreaModalError] = useState(null);
+  const [deleteConfirmArea, setDeleteConfirmArea] = useState(null);
+  const [deletingArea, setDeletingArea] = useState(false);
 
   // 1. Auth Guard
   useEffect(() => {
@@ -166,12 +196,120 @@ export const AdminDashboard = () => {
     }
   }, [usersPage, usersSearch]);
 
+  // 6. Load delivery areas from MongoDB
+  const loadDeliveryAreas = useCallback(async () => {
+    setLoadingDeliveryAreas(true);
+    setDeliveryAreasError(null);
+    try {
+      const data = await fetchAdminDeliveryAreas(areaSearch, areaStatusFilter);
+      setDeliveryAreas(data.data || []);
+    } catch (err) {
+      setDeliveryAreasError(err.message || 'Failed to load delivery areas.');
+    } finally {
+      setLoadingDeliveryAreas(false);
+    }
+  }, [areaSearch, areaStatusFilter]);
+
   useEffect(() => {
     loadOrders();
     loadStats();
     loadMenuData();
     loadUsersData();
-  }, [loadOrders, loadStats, loadMenuData, loadUsersData]);
+    loadDeliveryAreas();
+  }, [loadOrders, loadStats, loadMenuData, loadUsersData, loadDeliveryAreas]);
+
+  // Delivery Areas Handlers
+  const handleOpenAddArea = () => {
+    setEditingArea(null);
+    setAreaFormData({
+      name: '',
+      deliveryFee: '',
+      minOrderAmount: '',
+      estimatedTime: '30-45 mins',
+      isActive: true,
+    });
+    setAreaModalError(null);
+    setAreaModalOpen(true);
+  };
+
+  const handleOpenEditArea = (area) => {
+    setEditingArea(area);
+    setAreaFormData({
+      name: area.name,
+      deliveryFee: area.deliveryFee !== undefined ? String(area.deliveryFee) : '',
+      minOrderAmount: area.minOrderAmount !== undefined && area.minOrderAmount !== null ? String(area.minOrderAmount) : '',
+      estimatedTime: area.estimatedTime || '30-45 mins',
+      isActive: area.isActive !== undefined ? area.isActive : true,
+    });
+    setAreaModalError(null);
+    setAreaModalOpen(true);
+  };
+
+  const handleSaveArea = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!areaFormData.name.trim()) {
+      setAreaModalError('Area name is required.');
+      return;
+    }
+    const fee = Number(areaFormData.deliveryFee);
+    if (isNaN(fee) || fee < 0) {
+      setAreaModalError('Delivery fee must be a valid number (0 or higher).');
+      return;
+    }
+    const minOrder = areaFormData.minOrderAmount !== '' ? Number(areaFormData.minOrderAmount) : 0;
+    if (isNaN(minOrder) || minOrder < 0) {
+      setAreaModalError('Minimum order amount must be 0 or higher.');
+      return;
+    }
+
+    setAreaSubmitting(true);
+    setAreaModalError(null);
+    try {
+      const payload = {
+        name: areaFormData.name.trim(),
+        deliveryFee: fee,
+        minOrderAmount: minOrder,
+        estimatedTime: areaFormData.estimatedTime.trim() || '30-45 mins',
+        isActive: Boolean(areaFormData.isActive),
+      };
+
+      if (editingArea) {
+        await updateAdminDeliveryArea(editingArea._id, payload);
+      } else {
+        await createAdminDeliveryArea(payload);
+      }
+
+      setAreaModalOpen(false);
+      loadDeliveryAreas();
+    } catch (err) {
+      setAreaModalError(err.message || 'Failed to save delivery area.');
+    } finally {
+      setAreaSubmitting(false);
+    }
+  };
+
+  const handleToggleAreaStatus = async (area) => {
+    try {
+      await updateAdminDeliveryArea(area._id, { isActive: !area.isActive });
+      loadDeliveryAreas();
+    } catch (err) {
+      alert(`Failed to update area status: ${err.message}`);
+    }
+  };
+
+  const handleDeleteArea = async () => {
+    if (!deleteConfirmArea) return;
+    setDeletingArea(true);
+    try {
+      await deleteAdminDeliveryArea(deleteConfirmArea._id);
+      setDeleteConfirmArea(null);
+      loadDeliveryAreas();
+    } catch (err) {
+      alert(`Failed to delete area: ${err.message}`);
+    } finally {
+      setDeletingArea(false);
+    }
+  };
 
   // Open Individual Customer Details Modal
   const handleOpenUserDetail = async (userId) => {
@@ -283,6 +421,15 @@ export const AdminDashboard = () => {
     return Array.from(map.values());
   }, [allOrdersForStats]);
 
+  // Delivery Areas Statistics
+  const deliveryStats = useMemo(() => {
+    const total = deliveryAreas.length;
+    const active = deliveryAreas.filter((a) => a.isActive).length;
+    const inactive = total - active;
+    const avgFee = total > 0 ? Math.round(deliveryAreas.reduce((sum, a) => sum + (a.deliveryFee || 0), 0) / total) : 0;
+    return { total, active, inactive, avgFee };
+  }, [deliveryAreas]);
+
   // Actual food categories count in MongoDB (excluding 'all' UI filter tab)
   const realCategoriesCount = useMemo(() => {
     return categoriesList.filter((c) => c.slug !== 'all' && c.id !== 'all').length;
@@ -315,15 +462,16 @@ export const AdminDashboard = () => {
 
   // Organized Navigation Items (live database counts only, no dummy fallbacks)
   const navItems = [
-    { id: 'overview',   label: 'Dashboard Overview', icon: faGaugeHigh },
-    { id: 'orders',     label: 'Orders Management',  icon: faReceipt, count: stats.pending },
-    { id: 'users',      label: 'Users',              icon: faUsers, count: userStats.totalUsers },
-    { id: 'menu',       label: 'Menu & Products',    icon: faUtensils },
-    { id: 'categories', label: 'Categories',         icon: faLayerGroup },
-    { id: 'customers',  label: 'Order Customers',    icon: faUser, count: uniqueCustomers.length },
-    { id: 'website',    label: 'Website Management', icon: faGlobe },
-    { id: 'analytics',  label: 'Analytics & Reports',icon: faChartLine },
-    { id: 'settings',   label: 'Settings',           icon: faGear },
+    { id: 'overview',       label: 'Dashboard Overview', icon: faGaugeHigh },
+    { id: 'orders',         label: 'Orders Management',  icon: faReceipt, count: stats.pending },
+    { id: 'delivery-areas', label: 'Delivery Areas',     icon: faTruckFast, count: deliveryAreas.filter((a) => a.isActive).length },
+    { id: 'users',          label: 'Users',              icon: faUsers, count: userStats.totalUsers },
+    { id: 'menu',           label: 'Menu & Products',    icon: faUtensils },
+    { id: 'categories',     label: 'Categories',         icon: faLayerGroup },
+    { id: 'customers',      label: 'Order Customers',    icon: faUser, count: uniqueCustomers.length },
+    { id: 'website',        label: 'Website Management', icon: faGlobe },
+    { id: 'analytics',      label: 'Analytics & Reports',icon: faChartLine },
+    { id: 'settings',       label: 'Settings',           icon: faGear },
   ];
 
   return (
@@ -898,6 +1046,268 @@ export const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ─── TAB: DELIVERY AREAS & CHARGES MANAGEMENT ─── */}
+        {activeTab === 'delivery-areas' && (
+          <div className="admin-view-content">
+            {/* KPI Statistics Grid */}
+            <section className="admin-stats-grid" aria-label="Delivery Area Statistics">
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap total">
+                  <FontAwesomeIcon icon={faTruckFast} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">Total Delivery Areas</span>
+                  <span className="admin-stat-value">{deliveryStats.total}</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap completed">
+                  <FontAwesomeIcon icon={faLocationDot} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">Active Coverage</span>
+                  <span className="admin-stat-value">{deliveryStats.active} Areas</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap pending">
+                  <FontAwesomeIcon icon={faReceipt} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">Average Delivery Fee</span>
+                  <span className="admin-stat-value">Rs {deliveryStats.avgFee}</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-icon-wrap cancelled">
+                  <FontAwesomeIcon icon={faBan} />
+                </div>
+                <div className="admin-stat-info">
+                  <span className="admin-stat-label">Inactive Areas</span>
+                  <span className="admin-stat-value">{deliveryStats.inactive}</span>
+                </div>
+              </div>
+            </section>
+
+            {/* Controls Card: Search, Filter Tabs & Add Area Button */}
+            <div className="admin-controls-card">
+              <div className="admin-filter-tabs">
+                {[
+                  { id: 'all', label: 'All Areas', count: deliveryStats.total },
+                  { id: 'active', label: 'Active', count: deliveryStats.active },
+                  { id: 'inactive', label: 'Inactive', count: deliveryStats.inactive },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`admin-filter-pill ${areaStatusFilter === tab.id ? 'is-active' : ''}`}
+                    onClick={() => setAreaStatusFilter(tab.id)}
+                  >
+                    <span>{tab.label}</span>
+                    <span className="pill-badge">{tab.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="admin-search-wrap">
+                  <FontAwesomeIcon icon={faMagnifyingGlass} className="admin-search-icon" />
+                  <input
+                    type="text"
+                    className="admin-search-input"
+                    placeholder="Search delivery area..."
+                    value={areaSearch}
+                    onChange={(e) => setAreaSearch(e.target.value)}
+                  />
+                  {areaSearch && (
+                    <button
+                      type="button"
+                      className="admin-clear-search-btn"
+                      onClick={() => setAreaSearch('')}
+                      aria-label="Clear search"
+                    >
+                      <FontAwesomeIcon icon={faXmark} />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="admin-action-btn"
+                  onClick={handleOpenAddArea}
+                  style={{
+                    background: '#FF8C00',
+                    color: '#0A0A0A',
+                    fontWeight: 700,
+                    padding: '0.6rem 1.1rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 14px rgba(255, 140, 0, 0.3)',
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span>Add Delivery Area</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Delivery Areas Table Card */}
+            <div className="admin-table-card">
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#FFFFFF' }}>Delivery Areas & Charges (PKR)</h2>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+                  Configured delivery zones, charges, and minimum order limits. Used live during customer checkout.
+                </p>
+              </div>
+
+              {loadingDeliveryAreas ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>
+                  <FontAwesomeIcon icon={faCircleNotch} spin size="2x" style={{ marginBottom: '1rem', color: '#FF8C00' }} />
+                  <p>Loading delivery areas from database...</p>
+                </div>
+              ) : deliveryAreasError ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: '#EF4444' }}>
+                  <p>{deliveryAreasError}</p>
+                  <button
+                    type="button"
+                    className="admin-action-btn"
+                    onClick={loadDeliveryAreas}
+                    style={{ marginTop: '0.75rem', background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : deliveryAreas.length === 0 ? (
+                <div style={{ padding: '3.5rem', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                  <FontAwesomeIcon icon={faTruckFast} size="2x" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <h3>No Delivery Areas Found</h3>
+                  <p style={{ margin: '0.5rem 0 1rem' }}>
+                    {areaSearch ? `No areas match "${areaSearch}".` : 'No delivery areas found for this filter.'}
+                  </p>
+                  <button
+                    type="button"
+                    className="admin-action-btn"
+                    onClick={handleOpenAddArea}
+                    style={{ background: '#FF8C00', color: '#0A0A0A', fontWeight: 700 }}
+                  >
+                    <FontAwesomeIcon icon={faPlus} style={{ marginRight: '0.4rem' }} /> Add Your First Area
+                  </button>
+                </div>
+              ) : (
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Area Name</th>
+                        <th className="num-col">Delivery Charge</th>
+                        <th className="num-col">Min Order</th>
+                        <th>Estimated Time</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deliveryAreas.map((area) => (
+                        <tr key={area._id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                              <FontAwesomeIcon icon={faLocationDot} style={{ color: area.isActive ? '#FF8C00' : 'rgba(255,255,255,0.3)' }} />
+                              <strong style={{ color: area.isActive ? '#FFFFFF' : 'rgba(255,255,255,0.5)' }}>
+                                {area.name}
+                              </strong>
+                            </div>
+                          </td>
+                          <td className="num-col">
+                            <span style={{ color: '#FF8C00', fontWeight: 700 }}>
+                              Rs {area.deliveryFee?.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="num-col" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                            {area.minOrderAmount > 0 ? `Rs ${area.minOrderAmount.toLocaleString()}` : <span style={{ color: 'rgba(255,255,255,0.4)' }}>None</span>}
+                          </td>
+                          <td style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem' }}>
+                            <FontAwesomeIcon icon={faClock} style={{ marginRight: '0.4rem', color: 'rgba(255,255,255,0.4)' }} />
+                            {area.estimatedTime || '30-45 mins'}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAreaStatus(area)}
+                              title={area.isActive ? 'Click to deactivate' : 'Click to activate'}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                color: area.isActive ? '#10B981' : 'rgba(255,255,255,0.4)',
+                                fontWeight: 600,
+                                fontSize: '0.88rem',
+                              }}
+                            >
+                              <FontAwesomeIcon icon={area.isActive ? faToggleOn : faToggleOff} size="lg" />
+                              <span>{area.isActive ? 'Active' : 'Disabled'}</span>
+                            </button>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className="admin-action-btn"
+                                onClick={() => handleOpenEditArea(area)}
+                                title="Edit Delivery Area"
+                                style={{
+                                  background: 'rgba(255, 140, 0, 0.12)',
+                                  color: '#FF8C00',
+                                  border: '1px solid rgba(255, 140, 0, 0.3)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faPenToSquare} style={{ marginRight: '0.35rem' }} />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-action-btn"
+                                onClick={() => setDeleteConfirmArea(area)}
+                                title="Delete Delivery Area"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.12)',
+                                  color: '#EF4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.35rem' }} />
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ─── TAB: USERS MANAGEMENT (REAL MONGODB USERS) ─── */}
         {activeTab === 'users' && (
           <div className="admin-view-content">
@@ -1420,6 +1830,14 @@ export const AdminDashboard = () => {
                     <span className="admin-info-label">Delivery Address</span>
                     <span className="admin-info-val">{selectedOrder.customer?.address}</span>
                   </div>
+                  {selectedOrder.deliveryArea?.name && (
+                    <div className="admin-info-row">
+                      <span className="admin-info-label">Delivery Area</span>
+                      <span className="admin-info-val" style={{ color: '#FF8C00', fontWeight: 600 }}>
+                        {selectedOrder.deliveryArea.name}
+                      </span>
+                    </div>
+                  )}
                   {selectedOrder.customer?.notes && (
                     <div className="admin-info-row">
                       <span className="admin-info-label">Special Notes</span>
@@ -1468,17 +1886,46 @@ export const AdminDashboard = () => {
 
                   <div
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '1rem 0.75rem 0.5rem',
-                      fontWeight: 800,
-                      fontSize: '1.05rem',
                       borderTop: '1px solid rgba(255,255,255,0.1)',
-                      marginTop: '0.5rem',
+                      marginTop: '0.75rem',
+                      padding: '0.75rem 0.5rem 0.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      fontSize: '0.92rem',
                     }}
                   >
-                    <span>Grand Total:</span>
-                    <span style={{ color: '#FF8C00' }}>Rs {selectedOrder.totalAmount?.toLocaleString()}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.7)' }}>
+                      <span>Food Subtotal:</span>
+                      <span>Rs {(selectedOrder.subtotal != null ? selectedOrder.subtotal : (selectedOrder.totalAmount - (selectedOrder.deliveryFee || 0))).toLocaleString()}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.7)' }}>
+                      <span>
+                        Delivery Fee
+                        {selectedOrder.deliveryArea?.name && (
+                          <span style={{ color: '#FF8C00', marginLeft: '0.35rem', fontSize: '0.82rem' }}>
+                            ({selectedOrder.deliveryArea.name})
+                          </span>
+                        )}:
+                      </span>
+                      <span>Rs {(selectedOrder.deliveryFee || 0).toLocaleString()}</span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontWeight: 800,
+                        fontSize: '1.1rem',
+                        borderTop: '1px dashed rgba(255,255,255,0.15)',
+                        paddingTop: '0.5rem',
+                        marginTop: '0.25rem',
+                      }}
+                    >
+                      <span>Grand Total:</span>
+                      <span style={{ color: '#FF8C00' }}>Rs {selectedOrder.totalAmount?.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1599,6 +2046,248 @@ export const AdminDashboard = () => {
                     </table>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add / Edit Delivery Area Modal ─── */}
+      {areaModalOpen && (
+        <div className="admin-modal-overlay" onClick={() => setAreaModalOpen(false)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">
+                {editingArea ? (
+                  <>Edit Area: <span style={{ color: '#FF8C00' }}>{editingArea.name}</span></>
+                ) : (
+                  <>Add New <span style={{ color: '#FF8C00' }}>Delivery Area</span></>
+                )}
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setAreaModalOpen(false)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveArea} className="admin-modal-body">
+              {areaModalError && (
+                <div className="admin-toast error" style={{ marginBottom: '1rem' }}>
+                  {areaModalError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                    Area / Zone Name <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Satellite Town, Commercial Market"
+                    value={areaFormData.name}
+                    onChange={(e) => setAreaFormData({ ...areaFormData, name: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.92rem',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                      Delivery Fee (PKR) <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="10"
+                      placeholder="e.g. 150"
+                      value={areaFormData.deliveryFee}
+                      onChange={(e) => setAreaFormData({ ...areaFormData, deliveryFee: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontSize: '0.92rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                      Min Order Amount (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="50"
+                      placeholder="0 (no minimum)"
+                      value={areaFormData.minOrderAmount}
+                      onChange={(e) => setAreaFormData({ ...areaFormData, minOrderAmount: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontSize: '0.92rem',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+                    Estimated Delivery Time
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 30-45 mins"
+                    value={areaFormData.estimatedTime}
+                    onChange={(e) => setAreaFormData({ ...areaFormData, estimatedTime: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '0.92rem',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+                  <input
+                    type="checkbox"
+                    id="area-is-active"
+                    checked={areaFormData.isActive}
+                    onChange={(e) => setAreaFormData({ ...areaFormData, isActive: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#FF8C00', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="area-is-active" style={{ fontSize: '0.9rem', color: '#FFFFFF', cursor: 'pointer' }}>
+                    Enable this area for customer checkout
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAreaModalOpen(false)}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={areaSubmitting}
+                    style={{
+                      padding: '0.6rem 1.4rem',
+                      borderRadius: '8px',
+                      background: '#FF8C00',
+                      color: '#0A0A0A',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: areaSubmitting ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {areaSubmitting && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                    <span>{editingArea ? 'Save Changes' : 'Create Delivery Area'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delete Confirmation Modal ─── */}
+      {deleteConfirmArea && (
+        <div className="admin-modal-overlay" onClick={() => setDeleteConfirmArea(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title" style={{ color: '#EF4444' }}>
+                <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.5rem' }} />
+                Delete Delivery Area?
+              </h2>
+              <button
+                type="button"
+                className="admin-modal-close-btn"
+                onClick={() => setDeleteConfirmArea(null)}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body">
+              <p style={{ color: 'rgba(255,255,255,0.85)', margin: '0 0 1rem', lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete delivery area <strong style={{ color: '#FF8C00' }}>"{deleteConfirmArea.name}"</strong>?
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: '0 0 1.5rem' }}>
+                Customers will no longer be able to select this area for delivery orders. Historical orders will retain their recorded delivery details.
+              </p>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmArea(null)}
+                  style={{
+                    padding: '0.6rem 1.2rem',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingArea}
+                  onClick={handleDeleteArea}
+                  style={{
+                    padding: '0.6rem 1.3rem',
+                    borderRadius: '8px',
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: deletingArea ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  {deletingArea && <FontAwesomeIcon icon={faCircleNotch} spin />}
+                  <span>Delete Area</span>
+                </button>
               </div>
             </div>
           </div>

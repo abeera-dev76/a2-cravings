@@ -77,6 +77,30 @@ const orderSchema = new mongoose.Schema(
         message: 'Order must contain at least one item',
       },
     },
+    subtotal: {
+      type: Number,
+      min: [0, 'Subtotal cannot be negative'],
+    },
+    deliveryFee: {
+      type: Number,
+      min: [0, 'Delivery fee cannot be negative'],
+      default: 0,
+    },
+    deliveryArea: {
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'DeliveryArea',
+      },
+      name: {
+        type: String,
+        trim: true,
+      },
+      fee: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+    },
     totalAmount: {
       type: Number,
       required: true,

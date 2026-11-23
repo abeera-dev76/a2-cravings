@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const DeliveryArea = require('../models/DeliveryArea');
 
 /**
  * Generates a human-friendly unique order number.
@@ -140,10 +141,76 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // ─── 4. Generate Unique Order Number ───
+    // ─── 4. Delivery Area & Delivery Fee Calculation (Strictly Database-Driven) ───
+    const { deliveryAreaId, deliveryArea } = req.body;
+    let selectedAreaDoc = null;
+    let officialDeliveryFee = 0;
+    let areaInfo = null;
+
+    // Check if any active delivery areas exist in the system
+    const activeAreasCount = await DeliveryArea.countDocuments({ isActive: true });
+    const requestedAreaId = deliveryAreaId || (deliveryArea && (deliveryArea.id || deliveryArea._id));
+
+    if (activeAreasCount > 0) {
+      if (!requestedAreaId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please select your delivery area to proceed.',
+        });
+      }
+
+      if (String(requestedAreaId).match(/^[0-9a-fA-F]{24}$/)) {
+        selectedAreaDoc = await DeliveryArea.findById(requestedAreaId);
+      } else {
+        selectedAreaDoc = await DeliveryArea.findOne({
+          name: { $regex: `^${String(requestedAreaId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+        });
+      }
+
+      if (!selectedAreaDoc || !selectedAreaDoc.isActive) {
+        return res.status(400).json({
+          success: false,
+          message: 'Selected delivery area is inactive or not found. Please choose an active delivery area.',
+        });
+      }
+
+      // Check minimum order amount for selected area
+      if (selectedAreaDoc.minOrderAmount > 0 && calculatedTotal < selectedAreaDoc.minOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum order amount for ${selectedAreaDoc.name} is Rs ${selectedAreaDoc.minOrderAmount}. Your current food subtotal is Rs ${calculatedTotal}.`,
+        });
+      }
+
+      // STRICT SECURITY: Use the official database delivery fee
+      officialDeliveryFee = selectedAreaDoc.deliveryFee;
+      areaInfo = {
+        id: selectedAreaDoc._id,
+        name: selectedAreaDoc.name,
+        fee: officialDeliveryFee,
+      };
+    } else if (requestedAreaId) {
+      // Optional fallback if an area was passed during setup
+      if (String(requestedAreaId).match(/^[0-9a-fA-F]{24}$/)) {
+        selectedAreaDoc = await DeliveryArea.findById(requestedAreaId);
+        if (selectedAreaDoc) {
+          officialDeliveryFee = selectedAreaDoc.deliveryFee;
+          areaInfo = {
+            id: selectedAreaDoc._id,
+            name: selectedAreaDoc.name,
+            fee: officialDeliveryFee,
+          };
+        }
+      }
+    }
+
+    const calculatedSubtotal = calculatedTotal;
+    const finalTotalAmount = calculatedSubtotal + officialDeliveryFee;
+
+    // ─── 5. Generate Unique Order Number ───
     const orderNumber = await generateUniqueOrderNumber();
 
-    // ─── 5. Save Order to Database ───
+    // ─── 6. Save Order to Database ───
     const newOrder = await Order.create({
       orderNumber,
       customer: {
@@ -153,7 +220,10 @@ const createOrder = async (req, res) => {
         notes: (notes || '').trim(),
       },
       items: verifiedItems,
-      totalAmount: calculatedTotal,
+      subtotal: calculatedSubtotal,
+      deliveryFee: officialDeliveryFee,
+      deliveryArea: areaInfo,
+      totalAmount: finalTotalAmount,
       totalItems: totalItemsCount,
       status: 'pending',
       source: source || 'whatsapp',
@@ -220,6 +290,9 @@ const getOrderById = async (req, res) => {
       orderNumber: order.orderNumber,
       status: order.status,
       items: order.items,
+      subtotal: order.subtotal !== undefined ? order.subtotal : (order.totalAmount - (order.deliveryFee || 0)),
+      deliveryFee: order.deliveryFee || 0,
+      deliveryArea: order.deliveryArea || null,
       totalAmount: order.totalAmount,
       totalItems: order.totalItems,
       createdAt: order.createdAt,

@@ -208,7 +208,17 @@ export const TrackOrder = () => {
       });
     }
 
-    msg += `\n💰 *Total Amount:* Rs ${(order.totalAmount || 0).toLocaleString()}\n`;
+    const calculatedSubtotal =
+      order.subtotal !== undefined
+        ? order.subtotal
+        : order.totalAmount - (order.deliveryFee || 0);
+
+    msg += `\n🍲 *Food Subtotal:* Rs ${calculatedSubtotal.toLocaleString()}\n`;
+    if (order.deliveryArea?.name || order.deliveryFee > 0) {
+      msg += `🚚 *Delivery Area:* ${order.deliveryArea?.name || 'Rawalpindi'}\n`;
+      msg += `🛵 *Delivery Charges:* Rs ${(order.deliveryFee || 0).toLocaleString()}\n`;
+    }
+    msg += `💰 *Total Amount:* Rs ${(order.totalAmount || 0).toLocaleString()}\n`;
     msg += `🔗 *Live Tracking Link:* ${currentUrl}\n\n`;
     msg += `Please confirm my order and share estimated delivery time. Thank you!`;
 
@@ -516,6 +526,15 @@ export const TrackOrder = () => {
                     </div>
                   )}
 
+                  {order.deliveryArea?.name && (
+                    <div className="tracking-detail-row">
+                      <span className="tracking-detail-label">Delivery Area</span>
+                      <span className="tracking-detail-value" style={{ color: '#FF8C00' }}>
+                        {order.deliveryArea.name} (Rs {order.deliveryArea.fee})
+                      </span>
+                    </div>
+                  )}
+
                   {order.customer?.notes && (
                     <div className="tracking-detail-row">
                       <span className="tracking-detail-label">Instructions</span>
@@ -558,6 +577,20 @@ export const TrackOrder = () => {
                         </span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Pricing Breakdown: Subtotal + Delivery + Grand Total */}
+                  <div className="tracking-price-breakdown" style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                      <span>Food Subtotal:</span>
+                      <span>Rs {(order.subtotal !== undefined ? order.subtotal : (order.totalAmount - (order.deliveryFee || 0))).toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                      <span>Delivery Charges {order.deliveryArea?.name ? `(${order.deliveryArea.name})` : ''}:</span>
+                      <span style={{ color: order.deliveryFee > 0 ? '#FF8C00' : 'rgba(255, 255, 255, 0.5)' }}>
+                        Rs {(order.deliveryFee || 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="tracking-total-row">

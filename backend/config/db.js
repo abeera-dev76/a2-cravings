@@ -32,16 +32,21 @@ function sanitizeMongoUri(uri) {
  * - Development (Local): Uses MONGO_URI_LOCAL or MONGO_URI, defaulting to local MongoDB.
  */
 function getTargetUri() {
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  // Detect production: Render sets RENDER=true, Vercel sets VERCEL=1 or VERCEL_ENV=production
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    process.env.RENDER === 'true' ||
+    process.env.VERCEL === '1' ||
+    process.env.VERCEL_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'preview';
 
   if (isProduction) {
-    const prodUri = process.env.MONGODB_URI || process.env.MONGO_URI_ATLAS || process.env.MONGO_URI;
-    if (!prodUri || prodUri.includes('127.0.0.1') || prodUri.includes('localhost')) {
-      throw new Error(
-        'CRITICAL: Production environment detected, but no valid cloud MongoDB Atlas URI found. ' +
-        'Please set MONGODB_URI or MONGO_URI_ATLAS in your environment variables (e.g. on Render).'
-      );
-    }
+    const prodUri =
+      process.env.MONGODB_URI ||
+      process.env.MONGO_URI_ATLAS ||
+      process.env.MONGO_URI ||
+      'mongodb+srv://Attiq:Attiq123456.@a2cravings.fcvtigi.mongodb.net/attiq';
+
     return {
       uri: sanitizeMongoUri(prodUri),
       environment: 'production',
@@ -121,7 +126,12 @@ function getDatabaseInfo() {
     3: 'disconnecting',
   };
 
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    process.env.RENDER === 'true' ||
+    process.env.VERCEL === '1' ||
+    process.env.VERCEL_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'preview';
 
   return {
     status: stateMap[mongoose.connection.readyState] || 'unknown',

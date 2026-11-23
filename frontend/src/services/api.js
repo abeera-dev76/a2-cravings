@@ -563,6 +563,135 @@ export const fetchAdminUserById = async (userId) => {
   return data.data;
 };
 
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Delivery Areas & Charges API Methods
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Public: Fetch active delivery areas for customer checkout.
+ */
+export const fetchDeliveryAreas = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/delivery-areas`, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to fetch delivery areas');
+    }
+
+    return Array.isArray(data.data) ? data.data : [];
+  } catch (error) {
+    console.error('API Error [fetchDeliveryAreas]:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * Admin: Fetch all delivery areas (supports search & status filters).
+ */
+export const fetchAdminDeliveryAreas = async (search = '', status = 'all') => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const params = new URLSearchParams();
+  if (search && search.trim()) params.append('search', search.trim());
+  if (status && status !== 'all') params.append('status', status);
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE_URL}/admin/delivery-areas${qs}`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch delivery areas.');
+  }
+
+  return Array.isArray(data.data) ? data.data : [];
+};
+
+/**
+ * Admin: Add a new delivery area.
+ */
+export const createAdminDeliveryArea = async (payload) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/delivery-areas`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to create delivery area.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Update an existing delivery area.
+ */
+export const updateAdminDeliveryArea = async (areaId, payload) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/delivery-areas/${encodeURIComponent(areaId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update delivery area.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Delete a delivery area.
+ */
+export const deleteAdminDeliveryArea = async (areaId) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/delivery-areas/${encodeURIComponent(areaId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to delete delivery area.');
+  }
+
+  return data;
+};
+
 export default {
   fetchCategories,
   fetchProducts,
@@ -587,6 +716,11 @@ export default {
   fetchAdminUserStats,
   fetchAdminUsers,
   fetchAdminUserById,
+  fetchDeliveryAreas,
+  fetchAdminDeliveryAreas,
+  createAdminDeliveryArea,
+  updateAdminDeliveryArea,
+  deleteAdminDeliveryArea,
   checkApiHealth,
   API_BASE_URL,
 };

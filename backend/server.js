@@ -9,6 +9,8 @@ const PORT = process.env.PORT || 5000;
 // ─── CORS Configuration ───────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://a2-cravings.vercel.app',
+  'https://a2-cravings-7am1.vercel.app',
   'http://localhost:3001',
   'http://127.0.0.1:3001',
   'http://localhost:3000',
@@ -42,7 +44,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // ─── Health Check Endpoint ────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
+const handleHealth = (req, res) => {
   const dbInfo = getDatabaseInfo();
 
   res.status(200).json({
@@ -54,7 +56,11 @@ app.get('/api/health', (req, res) => {
     corsOrigins: allowedOrigins,
     timestamp: new Date().toISOString(),
   });
-});
+};
+
+app.get('/api/health', handleHealth);
+app.get('/health', handleHealth);
+app.get('/', handleHealth);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 const categoryRoutes = require('./routes/categoryRoutes');
@@ -62,12 +68,20 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const authRoutes = require('./routes/authRoutes');
+const deliveryAreaRoutes = require('./routes/deliveryAreaRoutes');
 
 app.use('/api/categories', categoryRoutes);
+app.use('/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
+app.use('/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+app.use('/api/delivery-areas', deliveryAreaRoutes);
+app.use('/delivery-areas', deliveryAreaRoutes);
 
 // ─── 404 Handler for unknown routes ──────────────────────────────────────────
 app.use((req, res) => {
@@ -83,15 +97,25 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
+// Export Express app for Vercel / serverless runtime & testing
+module.exports = app;
+
 // ─── MongoDB Connection + Server Start ───────────────────────────────────────
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
+if (require.main === module) {
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+        console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
+      });
+    })
+    .catch((err) => {
+      console.error('❌ MongoDB connection failed:', err.message);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB connection failed:', err.message);
-    process.exit(1);
+} else {
+  // Required as a module / serverless execution: initiate connection
+  connectDB().catch((err) => {
+    console.error('❌ Serverless MongoDB connection error:', err.message);
   });
+}

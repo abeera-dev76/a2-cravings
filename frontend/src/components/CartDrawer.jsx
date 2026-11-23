@@ -16,7 +16,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { useCart } from '../context/CartContext';
 import { businessData } from '../data/businessData';
 import { getWhatsAppUrl } from '../utils/whatsapp';
-import { createOrder } from '../services/api';
+import { createOrder, fetchDeliveryAreas } from '../services/api';
 import { navigate } from '../utils/navigation';
 import { useAuth } from '../context/AuthContext';
 
@@ -43,11 +43,54 @@ export const CartDrawer = () => {
     }
   });
 
+  const [deliveryAreas, setDeliveryAreas] = useState([]);
+  const [selectedAreaId, setSelectedAreaId] = useState('');
+  const [loadingAreas, setLoadingAreas] = useState(false);
+
   const [errors, setErrors] = useState({});
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [placedOrderSuccess, setPlacedOrderSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+
+  // Load active delivery areas when cart opens
+  useEffect(() => {
+    let isMounted = true;
+    const loadAreas = async () => {
+      try {
+        setLoadingAreas(true);
+        const areas = await fetchDeliveryAreas();
+        if (isMounted) {
+          setDeliveryAreas(areas);
+          if (areas.length > 0) {
+            try {
+              const savedAreaId = localStorage.getItem('a2_selected_delivery_area_id');
+              if (savedAreaId && areas.some((a) => a._id === savedAreaId)) {
+                setSelectedAreaId(savedAreaId);
+              }
+            } catch (err) {}
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load delivery areas:', err.message);
+      } finally {
+        if (isMounted) setLoadingAreas(false);
+      }
+    };
+
+    if (isCartOpen) {
+      loadAreas();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isCartOpen]);
+
+  const selectedArea = deliveryAreas.find((a) => a._id === selectedAreaId) || null;
+  const foodSubtotal = totalPrice;
+  const deliveryFee = selectedArea ? selectedArea.deliveryFee : 0;
+  const grandTotal = foodSubtotal + deliveryFee;
 
   // Close drawer on ESC key
   useEffect(() => {
@@ -106,6 +149,17 @@ export const CartDrawer = () => {
     }
   };
 
+  const handleAreaChange = (e) => {
+    const areaId = e.target.value;
+    setSelectedAreaId(areaId);
+    try {
+      localStorage.setItem('a2_selected_delivery_area_id', areaId);
+    } catch (err) {}
+    if (errors.deliveryArea) {
+      setErrors((prev) => ({ ...prev, deliveryArea: '' }));
+    }
+  };
+
   const validateCheckout = () => {
     const newErrors = {};
     if (!checkoutData.name.trim()) {
@@ -116,6 +170,15 @@ export const CartDrawer = () => {
     } else if (!/^[0-9+-\s()]{7,15}$/.test(checkoutData.phone.trim())) {
       newErrors.phone = 'Enter a valid phone number (e.g. 03145027631).';
     }
+
+    if (deliveryAreas.length > 0) {
+      if (!selectedAreaId) {
+        newErrors.deliveryArea = 'Please select your delivery area.';
+      } else if (selectedArea && selectedArea.minOrderAmount > 0 && foodSubtotal < selectedArea.minOrderAmount) {
+        newErrors.deliveryArea = `Minimum food order for ${selectedArea.name} is Rs ${selectedArea.minOrderAmount}. (Current subtotal: Rs ${foodSubtotal})`;
+      }
+    }
+
     if (!checkoutData.address.trim()) {
       newErrors.address = 'Please enter your delivery address.';
     } else if (checkoutData.address.trim().length < 8) {
@@ -144,6 +207,7 @@ export const CartDrawer = () => {
           address: checkoutData.address.trim(),
           notes: (checkoutData.instructions || '').trim(),
         },
+        deliveryAreaId: selectedAreaId || undefined,
         items: cart.map((item) => ({
           productId: item.id || item.slug,
           quantity: item.quantity,
@@ -164,7 +228,7 @@ export const CartDrawer = () => {
       }
     } catch (apiErr) {
       console.error('Order creation failed:', apiErr);
-      setSubmitError('Could not place order. Please try again.');
+      setSubmitError(apiErr.message || 'Could not place order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -365,6 +429,49 @@ export const CartDrawer = () => {
                       {errors.phone && <span className="cart-error-text">{errors.phone}</span>}
                     </div>
 
+                    {/* Delivery Area Dropdown Selector */}
+                    {deliveryAreas.length > 0 && (
+                      <div className="cart-form-field">
+                        <label htmlFor="cart-delivery-area">Delivery Area *</label>
+                        <select
+                          id="cart-delivery-area"
+                          name="deliveryArea"
+                          value={selectedAreaId}
+                          onChange={handleAreaChange}
+                          className={`cart-input ${errors.deliveryArea ? 'has-error' : ''}`}
+                          style={{
+                            background: '#151515',
+                            color: '#ffffff',
+                            border: errors.deliveryArea ? '1px solid #ff4d4f' : '1px solid rgba(255, 255, 255, 0.18)',
+                            borderRadius: '8px',
+                            padding: '0.75rem 0.9rem',
+                            width: '100%',
+                            fontSize: '0.92rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="">-- Select Your Delivery Area --</option>
+                          {deliveryAreas.map((area) => (
+                            <option key={area._id} value={area._id}>
+                              {area.name} — Rs {area.deliveryFee}
+                              {area.estimatedTime ? ` (${area.estimatedTime})` : ''}
+                              {area.minOrderAmount > 0 ? ` [Min: Rs ${area.minOrderAmount}]` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.deliveryArea && (
+                          <span className="cart-error-text" style={{ color: '#ff4d4f', fontSize: '0.82rem', marginTop: '0.25rem', display: 'block' }}>
+                            {errors.deliveryArea}
+                          </span>
+                        )}
+                        {selectedArea && selectedArea.minOrderAmount > 0 && (
+                          <span style={{ fontSize: '0.78rem', color: foodSubtotal >= selectedArea.minOrderAmount ? '#25D366' : '#FF8C00', marginTop: '0.2rem', display: 'block' }}>
+                            Minimum order for {selectedArea.name}: Rs {selectedArea.minOrderAmount} {foodSubtotal >= selectedArea.minOrderAmount ? '✓' : `(Add Rs ${selectedArea.minOrderAmount - foodSubtotal} more)`}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="cart-form-field">
                       <label htmlFor="cart-address">Complete Delivery Address *</label>
                       <textarea
@@ -417,16 +524,32 @@ export const CartDrawer = () => {
           )}
         </div>
 
-        {/* Footer with Subtotal and Primary Checkout Button */}
+        {/* Footer with Subtotal, Delivery Fee and Primary Checkout Button */}
         {!placedOrderSuccess && cart.length > 0 && (
           <div className="cart-drawer-footer">
-            <div className="cart-total-row">
-              <span className="cart-total-label">Total Amount:</span>
-              <span className="cart-total-value">Rs {totalPrice.toLocaleString()}</span>
+            <div className="cart-price-breakdown" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.85rem', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
+                <span>Food Subtotal:</span>
+                <span>Rs {foodSubtotal.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
+                <span>Delivery Charges:</span>
+                <span style={{ color: selectedArea ? '#FF8C00' : 'rgba(255, 255, 255, 0.5)' }}>
+                  {selectedArea
+                    ? `Rs ${selectedArea.deliveryFee.toLocaleString()} (${selectedArea.name})`
+                    : (deliveryAreas.length > 0 ? 'Select area in checkout' : 'Rs 0')}
+                </span>
+              </div>
+              <div className="cart-total-row" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.12)', paddingTop: '0.5rem', marginTop: '0.2rem' }}>
+                <span className="cart-total-label" style={{ fontWeight: 800 }}>Total Payable:</span>
+                <span className="cart-total-value" style={{ fontWeight: 800, color: '#FF8C00' }}>
+                  Rs {grandTotal.toLocaleString()}
+                </span>
+              </div>
             </div>
 
             <p className="cart-delivery-note">
-              Free & prompt delivery within Rawalpindi & nearby vicinities.
+              Prompt & fresh homemade delivery across Rawalpindi.
             </p>
 
             {showCheckoutForm ? (
@@ -444,7 +567,7 @@ export const CartDrawer = () => {
                 ) : (
                   <>
                     <FontAwesomeIcon icon={faCircleCheck} className="btn-icon" />
-                    <span>Confirm Order (Rs {totalPrice.toLocaleString()})</span>
+                    <span>Confirm Order (Rs {grandTotal.toLocaleString()})</span>
                   </>
                 )}
               </button>
@@ -454,7 +577,7 @@ export const CartDrawer = () => {
                 className="btn btn-primary cart-checkout-btn"
                 onClick={() => setShowCheckoutForm(true)}
               >
-                <span>Proceed to Checkout</span>
+                <span>Proceed to Checkout (Rs {grandTotal.toLocaleString()})</span>
                 <FontAwesomeIcon icon={faArrowRight} />
               </button>
             )}
