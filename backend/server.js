@@ -43,6 +43,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// ─── Vercel Path Restoration Middleware ──────────────────────────────────────
+app.use((req, res, next) => {
+  const realPath = req.headers['x-matched-path'] || req.headers['x-forwarded-url'];
+  if ((req.url === '/server.js' || req.url === '/index.js' || req.path === '/server.js') && realPath) {
+    req.url = realPath;
+  }
+  next();
+});
+
 // ─── Health Check Endpoint ────────────────────────────────────────────────────
 const handleHealth = (req, res) => {
   const dbInfo = getDatabaseInfo();
