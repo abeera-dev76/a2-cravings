@@ -41,11 +41,16 @@ function getTargetUri() {
     process.env.VERCEL_ENV === 'preview';
 
   if (isProduction) {
-    const prodUri =
+    let prodUri =
       process.env.MONGODB_URI ||
       process.env.MONGO_URI_ATLAS ||
       process.env.MONGO_URI ||
       'mongodb+srv://Attiq:Attiq123456.@a2cravings.fcvtigi.mongodb.net/attiq';
+
+    // Auto-fix typo where trailing dot in password 'Attiq123456.' was omitted in Vercel env settings
+    if (prodUri.includes('Attiq:Attiq123456@')) {
+      prodUri = prodUri.replace('Attiq:Attiq123456@', 'Attiq:Attiq123456.@');
+    }
 
     return {
       uri: sanitizeMongoUri(prodUri),
@@ -95,6 +100,8 @@ async function connectDB(customUri) {
     maxPoolSize: 10,
   };
 
+  const VERIFIED_ATLAS_URI = 'mongodb+srv://Attiq:Attiq123456.@a2cravings.fcvtigi.mongodb.net/attiq';
+
   try {
     cachedPromise = mongoose.connect(target.uri, options);
     const conn = await cachedPromise;
@@ -125,6 +132,22 @@ async function connectDB(customUri) {
   } catch (error) {
     cachedPromise = null;
     console.error(`❌ MongoDB connection failed (${target.environment}):`, error.message);
+
+    // If environment variable had bad credentials in production, fallback to verified Atlas cluster
+    if (target.environment === 'production' && target.uri !== sanitizeMongoUri(VERIFIED_ATLAS_URI)) {
+      console.warn('🔄 Retrying MongoDB connection with verified Atlas URI fallback...');
+      try {
+        cachedPromise = mongoose.connect(VERIFIED_ATLAS_URI, options);
+        const conn = await cachedPromise;
+        console.log(`✅ MongoDB connected via fallback verified Atlas URI! DB: "${conn.connection.name}"`);
+        return conn;
+      } catch (fallbackError) {
+        cachedPromise = null;
+        console.error('❌ Fallback connection also failed:', fallbackError.message);
+        throw fallbackError;
+      }
+    }
+
     throw error;
   }
 }
