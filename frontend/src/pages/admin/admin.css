@@ -1207,8 +1207,10 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-width: 108px;
-  padding: 0.42rem 0.85rem;
+  width: 116px;
+  min-width: 116px;
+  max-width: 116px;
+  padding: 0.42rem 0.75rem;
   border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -1217,6 +1219,7 @@
   transition: all 0.2s ease;
   white-space: nowrap;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .admin-stock-toggle-btn.in-stock {

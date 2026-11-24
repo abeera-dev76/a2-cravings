@@ -2163,8 +2163,8 @@ export const AdminDashboard = () => {
                         <th style={{ minWidth: '100px' }}>Category</th>
                         <th style={{ minWidth: '90px' }}>Price</th>
                         <th style={{ minWidth: '95px' }}>Status</th>
-                        <th style={{ minWidth: '135px', width: '135px' }}>Stock</th>
-                        <th style={{ textAlign: 'right', minWidth: '160px' }}>Actions</th>
+                        <th style={{ minWidth: '150px', width: '150px' }}>Stock</th>
+                        <th style={{ textAlign: 'right', minWidth: '180px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2254,7 +2254,7 @@ export const AdminDashboard = () => {
                                 )}
                               </div>
                             </td>
-                            <td style={{ minWidth: '135px', width: '135px' }}>
+                            <td style={{ minWidth: '150px', width: '150px' }}>
                               <button
                                 type="button"
                                 onClick={() => handleToggleProductAvailability(p)}
