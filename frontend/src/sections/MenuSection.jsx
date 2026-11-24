@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import FoodCard from '../components/FoodCard';
 import Categories from './Categories';
-import { menuCategories } from '../data/menuData';
+import { menuCategories, menuItems } from '../data/menuData';
 import { fetchCategories, fetchProducts } from '../services/api';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -47,8 +47,17 @@ export const MenuSection = () => {
       const items = await fetchProducts(catId);
       setProducts(items);
     } catch (err) {
-      console.error('Failed to load menu products:', err);
-      setError('Unable to load our menu right now. Please check your internet connection or backend server.');
+      console.warn('Live API error loading products, using offline fallback menu:', err.message);
+      const fallbackList =
+        catId === 'all'
+          ? menuItems
+          : menuItems.filter((item) => item.category === catId);
+
+      if (fallbackList && fallbackList.length > 0) {
+        setProducts(fallbackList);
+      } else {
+        setError('Unable to load our menu right now. Please check your internet connection or backend server.');
+      }
     } finally {
       setLoading(false);
     }

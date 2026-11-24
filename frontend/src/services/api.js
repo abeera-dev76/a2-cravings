@@ -32,6 +32,35 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 /**
+ * Robust fetch with automatic retry for serverless cold-start resilience.
+ */
+const fetchWithRetry = async (url, options = {}, retries = 2, delay = 450) => {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) {
+        return res;
+      }
+      // If server returns 502/503 during cold boot, retry
+      if ((res.status === 502 || res.status === 503) && attempt < retries) {
+        console.warn(`[API Retry] ${res.status} on ${url}, retrying attempt ${attempt + 1}...`);
+        await new Promise((r) => setTimeout(r, delay * attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        console.warn(`[API Retry] Network error on ${url}: ${err.message}, retrying attempt ${attempt + 1}...`);
+        await new Promise((r) => setTimeout(r, delay * attempt));
+      }
+    }
+  }
+  throw lastError || new Error(`Network request failed after ${retries} attempts.`);
+};
+
+/**
  * Normalizes a single product from MongoDB so frontend components
  * (FoodCard, CartContext, etc.) have a consistent `id` field.
  */
@@ -61,7 +90,7 @@ const normalizeCategory = (cat) => {
  */
 export const fetchCategories = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/categories`, {
+    const res = await fetchWithRetry(`${API_BASE_URL}/categories`, {
       headers: {
         'Accept': 'application/json',
       },
@@ -104,7 +133,7 @@ export const fetchProducts = async (category = 'all') => {
       url += `?category=${encodeURIComponent(category)}`;
     }
 
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: {
         'Accept': 'application/json',
       },
@@ -708,7 +737,7 @@ export const fetchAdminProducts = async (category = 'all') => {
     url += `&category=${encodeURIComponent(category)}`;
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: {
       'Accept': 'application/json',
     },

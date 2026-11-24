@@ -67,12 +67,20 @@ app.use(async (req, res, next) => {
     }
     next();
   } catch (err) {
-    console.error('❌ Database connection middleware error:', err.message);
-    res.status(503).json({
-      success: false,
-      message: 'Database connection failed',
-      error: err.message,
-    });
+    console.error('❌ Database connection middleware error, retrying once...', err.message);
+    try {
+      // Short delay for cold-start serverless spikes before retry
+      await new Promise((r) => setTimeout(r, 350));
+      await connectDB();
+      return next();
+    } catch (retryErr) {
+      console.error('❌ Second database connection attempt failed:', retryErr.message);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        error: retryErr.message,
+      });
+    }
   }
 });
 

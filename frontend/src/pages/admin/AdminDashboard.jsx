@@ -2156,84 +2156,75 @@ export const AdminDashboard = () => {
                 </div>
               ) : (
                 <div className="admin-table-responsive">
-                  <table className="admin-table">
+                  <table className="admin-product-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '40px' }}>
-                          <input
-                            type="checkbox"
-                            checked={
-                              displayedProducts.length > 0 &&
-                              displayedProducts.every((p) => selectedProductIds.includes(p._id))
-                            }
-                            onChange={handleToggleSelectAll}
-                            style={{ cursor: 'pointer', accentColor: '#FF8C00' }}
-                          />
-                        </th>
-                        <th>Image</th>
-                        <th>Dish Details</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                        <th>Availability</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
+                        <th style={{ minWidth: '260px' }}>Dish Details</th>
+                        <th style={{ minWidth: '100px' }}>Category</th>
+                        <th style={{ minWidth: '90px' }}>Price</th>
+                        <th style={{ minWidth: '100px' }}>Status</th>
+                        <th style={{ minWidth: '110px' }}>Stock</th>
+                        <th style={{ textAlign: 'right', minWidth: '150px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayedProducts.map((p) => {
-                        const isSelected = selectedProductIds.includes(p._id);
                         return (
-                          <tr key={p.slug || p._id || p.id} style={isSelected ? { background: 'rgba(255,140,0,0.06)' } : {}}>
+                          <tr key={p.slug || p._id || p.id}>
                             <td>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleSelectProduct(p._id)}
-                                style={{ cursor: 'pointer', accentColor: '#FF8C00' }}
-                              />
-                            </td>
-                            <td>
-                              <img
-                                src={p.image || p.fallbackImage || '/images/hero/hero-food.png'}
-                                alt={p.name}
-                                className="admin-product-thumb"
-                                onError={(e) => { e.currentTarget.src = '/images/hero/hero-food.png'; }}
-                              />
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <strong style={{ color: '#FFFFFF', fontSize: '0.92rem' }}>{p.name}</strong>
-                                {p.sku && (
-                                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                                    {p.sku}
-                                  </span>
-                                )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                                <div className="admin-product-thumb-box">
+                                  <img
+                                    src={p.image || p.fallbackImage || '/images/hero/hero-food.png'}
+                                    alt={p.name}
+                                    className="admin-product-thumb-img"
+                                    loading="lazy"
+                                    width="52"
+                                    height="52"
+                                    onError={(e) => {
+                                      e.currentTarget.onerror = null;
+                                      e.currentTarget.src = '/images/hero/hero-food.png';
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    <h4 className="admin-product-title">{p.name}</h4>
+                                    {p.sku && (
+                                      <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontFamily: 'monospace' }}>
+                                        {p.sku}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {p.description && (
+                                    <p className="admin-product-desc" title={p.description}>
+                                      {p.description}
+                                    </p>
+                                  )}
+                                  {p.prepTime && (
+                                    <span style={{ fontSize: '0.72rem', color: '#FF8C00', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.2rem' }}>
+                                      ⏱ {p.prepTime}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <p style={{ margin: '0.2rem 0 0', fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>
-                                {p.description ? p.description.slice(0, 70) + (p.description.length > 70 ? '...' : '') : ''}
-                              </p>
-                              {p.prepTime && (
-                                <span style={{ fontSize: '0.72rem', color: '#FF8C00', display: 'inline-block', marginTop: '0.2rem' }}>
-                                  ⏱ {p.prepTime}
-                                </span>
-                              )}
                             </td>
                             <td>
-                              <span style={{ textTransform: 'capitalize', color: 'rgba(255,255,255,0.7)' }}>
+                              <span className="admin-product-cat-pill">
                                 {p.category}
                               </span>
                             </td>
                             <td>
-                              {p.discountPrice && p.discountPrice < p.price ? (
-                                <div>
-                                  <strong style={{ color: '#FF8C00' }}>Rs {p.discountPrice}</strong>
-                                  <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.4)', fontSize: '0.76rem', display: 'block' }}>
-                                    Rs {p.price}
-                                  </span>
-                                </div>
-                              ) : (
-                                <strong style={{ color: '#FF8C00' }}>Rs {p.price}</strong>
-                              )}
+                              <div>
+                                {p.discountPrice && p.discountPrice < p.price ? (
+                                  <>
+                                    <span className="admin-product-price">Rs {p.discountPrice}</span>
+                                    <span className="admin-product-price-old">Rs {p.price}</span>
+                                  </>
+                                ) : (
+                                  <span className="admin-product-price">Rs {p.price}</span>
+                                )}
+                              </div>
                             </td>
                             <td>
                               <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
@@ -2267,60 +2258,15 @@ export const AdminDashboard = () => {
                                 type="button"
                                 onClick={() => handleToggleProductAvailability(p)}
                                 disabled={togglingProductId === (p._id || p.slug)}
-                                title={p.isAvailable ? 'Click to mark Out of Stock' : 'Click to mark In Stock'}
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.4rem',
-                                  color: p.isAvailable ? '#10B981' : '#EF4444',
-                                  fontWeight: 600,
-                                  fontSize: '0.88rem',
-                                }}
+                                className={`admin-stock-toggle-btn ${p.isAvailable !== false ? 'in-stock' : 'out-stock'}`}
+                                title={p.isAvailable !== false ? 'Click to mark Out of Stock' : 'Click to mark In Stock'}
                               >
-                                <FontAwesomeIcon icon={p.isAvailable ? faToggleOn : faToggleOff} size="lg" />
-                                <span>{p.isAvailable ? 'In Stock' : 'Out of Stock'}</span>
+                                <FontAwesomeIcon icon={p.isAvailable !== false ? faToggleOn : faToggleOff} size="lg" />
+                                <span>{p.isAvailable !== false ? 'In Stock' : 'Out of Stock'}</span>
                               </button>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
-                                <button
-                                  type="button"
-                                  className="admin-action-btn"
-                                  onClick={() => setPreviewProduct(p)}
-                                  title="Quick Preview"
-                                  style={{
-                                    background: 'rgba(255, 255, 255, 0.08)',
-                                    color: '#FFFFFF',
-                                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                                    padding: '0.4rem 0.65rem',
-                                    borderRadius: '6px',
-                                    fontSize: '0.82rem',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  <FontAwesomeIcon icon={faEye} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="admin-action-btn"
-                                  onClick={() => handleDuplicateProduct(p)}
-                                  disabled={duplicatingProductId === (p._id || p.slug)}
-                                  title="Duplicate Dish"
-                                  style={{
-                                    background: 'rgba(59, 130, 246, 0.12)',
-                                    color: '#60A5FA',
-                                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                                    padding: '0.4rem 0.65rem',
-                                    borderRadius: '6px',
-                                    fontSize: '0.82rem',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  <FontAwesomeIcon icon={duplicatingProductId === (p._id || p.slug) ? faCircleNotch : faClone} spin={duplicatingProductId === (p._id || p.slug)} />
-                                </button>
+                              <div className="admin-action-btn-group">
                                 <button
                                   type="button"
                                   className="admin-action-btn"
@@ -2330,14 +2276,18 @@ export const AdminDashboard = () => {
                                     background: 'rgba(255, 140, 0, 0.12)',
                                     color: '#FF8C00',
                                     border: '1px solid rgba(255, 140, 0, 0.3)',
-                                    padding: '0.4rem 0.75rem',
+                                    padding: '0.38rem 0.75rem',
                                     borderRadius: '6px',
                                     fontSize: '0.82rem',
+                                    fontWeight: 600,
                                     cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
                                   }}
                                 >
-                                  <FontAwesomeIcon icon={faPenToSquare} style={{ marginRight: '0.35rem' }} />
-                                  Edit
+                                  <FontAwesomeIcon icon={faPenToSquare} />
+                                  <span>Edit</span>
                                 </button>
                                 <button
                                   type="button"
@@ -2348,14 +2298,18 @@ export const AdminDashboard = () => {
                                     background: 'rgba(239, 68, 68, 0.12)',
                                     color: '#EF4444',
                                     border: '1px solid rgba(239, 68, 68, 0.3)',
-                                    padding: '0.4rem 0.75rem',
+                                    padding: '0.38rem 0.75rem',
                                     borderRadius: '6px',
                                     fontSize: '0.82rem',
+                                    fontWeight: 600,
                                     cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
                                   }}
                                 >
-                                  <FontAwesomeIcon icon={faTrashCan} style={{ marginRight: '0.35rem' }} />
-                                  Delete
+                                  <FontAwesomeIcon icon={faTrashCan} />
+                                  <span>Delete</span>
                                 </button>
                               </div>
                             </td>

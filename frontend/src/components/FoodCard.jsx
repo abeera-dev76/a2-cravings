@@ -71,7 +71,8 @@ export const FoodCard = ({ item }) => {
             width="400"
             height="300"
             onError={(e) => {
-              if (item.fallbackImage && e.currentTarget.src !== item.fallbackImage) {
+              e.currentTarget.onerror = null;
+              if (item.fallbackImage && !e.currentTarget.src.includes(item.fallbackImage)) {
                 e.currentTarget.src = item.fallbackImage;
               } else {
                 e.currentTarget.src = '/images/hero/hero-food.png';

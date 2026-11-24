@@ -26,6 +26,8 @@ function sanitizeMongoUri(uri) {
   return trimmed;
 }
 
+const VERIFIED_ATLAS_URI = 'mongodb+srv://Attiq:Attiq123456.@a2cravings.fcvtigi.mongodb.net/attiq?retryWrites=true&w=majority';
+
 /**
  * Determines the appropriate MongoDB URI based on environment:
  * - Production (Render / Live): Uses MONGODB_URI or MONGO_URI_ATLAS or MONGO_URI.
@@ -45,10 +47,13 @@ function getTargetUri() {
       process.env.MONGODB_URI ||
       process.env.MONGO_URI_ATLAS ||
       process.env.MONGO_URI ||
-      'mongodb+srv://Attiq:Attiq123456.@a2cravings.fcvtigi.mongodb.net/attiq';
+      VERIFIED_ATLAS_URI;
 
     // Auto-fix typo where trailing dot in password 'Attiq123456.' was omitted in Vercel env settings
-    if (prodUri.includes('Attiq:Attiq123456@')) {
+    if (prodUri.includes('a2cravings.fcvtigi.mongodb.net')) {
+      // Ensure the verified credentials with the period are always used for the attiq cluster
+      prodUri = VERIFIED_ATLAS_URI;
+    } else if (prodUri.includes('Attiq:Attiq123456@')) {
       prodUri = prodUri.replace('Attiq:Attiq123456@', 'Attiq:Attiq123456.@');
     }
 
@@ -84,8 +89,17 @@ async function connectDB(customUri) {
     return mongoose.connection;
   }
 
+  // If another request is currently connecting, safely await that promise
   if (mongoose.connection.readyState === 2 && cachedPromise) {
-    return cachedPromise;
+    try {
+      await cachedPromise;
+      if (mongoose.connection.readyState === 1) {
+        return mongoose.connection;
+      }
+    } catch {
+      // In-flight attempt failed, clear cache and proceed to connect cleanly below
+      cachedPromise = null;
+    }
   }
 
   let target;
@@ -99,8 +113,6 @@ async function connectDB(customUri) {
     serverSelectionTimeoutMS: 10000,
     maxPoolSize: 10,
   };
-
-  const VERIFIED_ATLAS_URI = 'mongodb+srv://Attiq:Attiq123456.@a2cravings.fcvtigi.mongodb.net/attiq';
 
   try {
     cachedPromise = mongoose.connect(target.uri, options);
