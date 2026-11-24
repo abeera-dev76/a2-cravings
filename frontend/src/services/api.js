@@ -818,6 +818,54 @@ export const toggleAdminProductAvailability = async (productId) => {
   return data;
 };
 
+/**
+ * Admin: Duplicate an existing product.
+ */
+export const duplicateAdminProduct = async (productId) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/products/duplicate/${encodeURIComponent(productId)}`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to duplicate product.');
+  }
+
+  return data;
+};
+
+/**
+ * Admin: Bulk update availability for multiple products.
+ */
+export const bulkUpdateAdminProductAvailability = async (ids, isAvailable) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/products/bulk-availability`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids, isAvailable }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update bulk availability.');
+  }
+
+  return data;
+};
+
 // ─── ADMIN CATEGORY MANAGEMENT ──────────────────────────────────────────────
 
 /**
@@ -912,6 +960,31 @@ export const deleteAdminCategory = async (categoryId, force = false) => {
   return data;
 };
 
+/**
+ * Admin: Reassign products to a target category and delete the source category.
+ */
+export const reassignAndDeleteAdminCategory = async (categoryId, targetCategorySlug) => {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated as admin.');
+
+  const res = await fetch(`${API_BASE_URL}/admin/categories/reassign-and-delete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ categoryId, targetCategorySlug }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Failed to reassign and delete category.');
+  }
+
+  return data;
+};
+
 export default {
   fetchCategories,
   fetchProducts,
@@ -944,12 +1017,15 @@ export default {
   fetchAdminProducts,
   createAdminProduct,
   updateAdminProduct,
+  duplicateAdminProduct,
+  bulkUpdateAdminProductAvailability,
   deleteAdminProduct,
   toggleAdminProductAvailability,
   fetchAdminCategories,
   createAdminCategory,
   updateAdminCategory,
   deleteAdminCategory,
+  reassignAndDeleteAdminCategory,
   checkApiHealth,
   API_BASE_URL,
 };

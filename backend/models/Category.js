@@ -16,6 +16,15 @@ const categorySchema = new mongoose.Schema(
       required: [true, 'Category name is required'],
       trim: true,
     },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    image: {
+      type: String,
+      default: '',
+    },
     // Optional display order (lower = shown first)
     order: {
       type: Number,
@@ -24,6 +33,10 @@ const categorySchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
     },
   },
   {

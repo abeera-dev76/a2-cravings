@@ -18,6 +18,8 @@ const {
 const {
   createProduct,
   updateProduct,
+  duplicateProduct,
+  bulkUpdateAvailability,
   deleteProduct,
   toggleProductAvailability,
 } = require('../controllers/productController');
@@ -25,6 +27,7 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
+  reassignAndDeleteCategory,
 } = require('../controllers/categoryController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -38,12 +41,15 @@ router.patch('/orders/:orderId/status', protect, updateOrderStatus);
 
 // Admin Product Management CRUD (Requires valid JWT Bearer token)
 router.post('/products', protect, createProduct);
+router.post('/products/duplicate/:id', protect, duplicateProduct);
+router.patch('/products/bulk-availability', protect, bulkUpdateAvailability);
 router.put('/products/:id', protect, updateProduct);
 router.delete('/products/:id', protect, deleteProduct);
 router.patch('/products/:id/toggle-availability', protect, toggleProductAvailability);
 
 // Admin Category Management CRUD (Requires valid JWT Bearer token)
 router.post('/categories', protect, createCategory);
+router.post('/categories/reassign-and-delete', protect, reassignAndDeleteCategory);
 router.put('/categories/:id', protect, updateCategory);
 router.delete('/categories/:id', protect, deleteCategory);
 

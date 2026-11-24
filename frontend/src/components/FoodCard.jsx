@@ -36,12 +36,15 @@ export const FoodCard = ({ item }) => {
 
   const handleAddToCart = (e) => {
     e.preventDefault();
-    addToCart(item, 1);
+    const activePrice = item.discountPrice && item.discountPrice < item.price ? item.discountPrice : item.price;
+    addToCart({ ...item, price: activePrice }, 1);
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
     }, 1800);
   };
+
+  const badgeText = item.badge || (item.isBestseller ? 'Bestseller' : item.isFeatured ? 'Featured' : item.isNewArrival ? 'New' : '');
 
   return (
     <article
@@ -51,11 +54,11 @@ export const FoodCard = ({ item }) => {
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      aria-label={`${item.name} - Rs ${item.price}`}
+      aria-label={`${item.name} - Rs ${item.discountPrice || item.price}`}
     >
       {/* Food Image Container */}
       <div className="food-card-image-wrap">
-        {item.badge && <span className="food-card-badge">{item.badge}</span>}
+        {badgeText && <span className="food-card-badge">{badgeText}</span>}
         <picture>
           {item.image && item.image.endsWith('.webp') && (
             <source srcSet={item.image} type="image/webp" />
@@ -83,8 +86,27 @@ export const FoodCard = ({ item }) => {
       <div className="food-card-body">
         <div className="food-card-header">
           <h3 className="food-card-title">{item.name}</h3>
-          <span className="food-card-price">Rs {item.price}</span>
+          <div className="food-card-price-wrap" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+            {item.discountPrice && item.discountPrice < item.price ? (
+              <>
+                <span className="food-card-price" style={{ color: '#FF8C00', fontWeight: 700 }}>
+                  Rs {item.discountPrice}
+                </span>
+                <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', marginLeft: '0.35rem' }}>
+                  Rs {item.price}
+                </span>
+              </>
+            ) : (
+              <span className="food-card-price">Rs {item.price}</span>
+            )}
+          </div>
         </div>
+
+        {item.prepTime && (
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span>⏱ Prep: {item.prepTime}</span>
+          </div>
+        )}
 
         <p className="food-card-description">{item.description}</p>
 
