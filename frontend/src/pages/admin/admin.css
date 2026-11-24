@@ -1205,28 +1205,38 @@
 .admin-stock-toggle-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 108px;
+  padding: 0.42rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s ease;
   white-space: nowrap;
-  background: transparent;
+  box-sizing: border-box;
 }
 
 .admin-stock-toggle-btn.in-stock {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.14);
   color: #10B981;
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.admin-stock-toggle-btn.in-stock:hover {
+  background: rgba(16, 185, 129, 0.22);
 }
 
 .admin-stock-toggle-btn.out-stock {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.14);
   color: #EF4444;
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.admin-stock-toggle-btn.out-stock:hover {
+  background: rgba(239, 68, 68, 0.22);
 }
 
 .admin-action-btn-group {

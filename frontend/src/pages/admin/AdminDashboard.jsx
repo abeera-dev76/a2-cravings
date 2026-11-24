@@ -2159,12 +2159,12 @@ export const AdminDashboard = () => {
                   <table className="admin-product-table">
                     <thead>
                       <tr>
-                        <th style={{ minWidth: '260px' }}>Dish Details</th>
+                        <th style={{ minWidth: '240px' }}>Dish Details</th>
                         <th style={{ minWidth: '100px' }}>Category</th>
                         <th style={{ minWidth: '90px' }}>Price</th>
-                        <th style={{ minWidth: '100px' }}>Status</th>
-                        <th style={{ minWidth: '110px' }}>Stock</th>
-                        <th style={{ textAlign: 'right', minWidth: '150px' }}>Actions</th>
+                        <th style={{ minWidth: '95px' }}>Status</th>
+                        <th style={{ minWidth: '135px', width: '135px' }}>Stock</th>
+                        <th style={{ textAlign: 'right', minWidth: '160px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2178,7 +2178,8 @@ export const AdminDashboard = () => {
                                     src={p.image || p.fallbackImage || '/images/hero/hero-food.png'}
                                     alt={p.name}
                                     className="admin-product-thumb-img"
-                                    loading="lazy"
+                                    loading="eager"
+                                    decoding="async"
                                     width="52"
                                     height="52"
                                     onError={(e) => {
@@ -2253,7 +2254,7 @@ export const AdminDashboard = () => {
                                 )}
                               </div>
                             </td>
-                            <td>
+                            <td style={{ minWidth: '135px', width: '135px' }}>
                               <button
                                 type="button"
                                 onClick={() => handleToggleProductAvailability(p)}

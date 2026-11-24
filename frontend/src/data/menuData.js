@@ -59,7 +59,7 @@ export const menuItems = [
     price: 650,
     badge: 'Chef Special',
     description: 'Our signature masterpiece packed with premium chicken, extra cheese blend, and secret spices.',
-    image: '/images/pasta/a2-special-pasta.png',
+    image: '/images/pasta/a2-special-pasta.webp',
     alt: 'A2 Special Pasta - Signature homemade fast food Rawalpindi'
   },
 
@@ -70,7 +70,7 @@ export const menuItems = [
     category: 'buns',
     price: 200,
     description: 'Golden, soft baked bun stuffed generously with flavorful shredded chicken filling.',
-    image: '/images/buns/chicken-filling-bun.png',
+    image: '/images/buns/chicken-filling-bun.webp',
     alt: 'Chicken Filling Bun - Fresh baked homemade bun Rawalpindi'
   },
   {
@@ -79,7 +79,7 @@ export const menuItems = [
     category: 'buns',
     price: 150,
     description: 'Fresh warm bun filled with lightly spiced chicken and crunchy garden vegetables.',
-    image: '/images/buns/chicken-vegetable-filling-bun.png',
+    image: '/images/buns/chicken-vegetable-filling-bun.webp',
     alt: 'Chicken and Vegetable Stuffed Bun - A2 Cravings Rawalpindi'
   },
   {
@@ -112,7 +112,7 @@ export const menuItems = [
     price: 500,
     badge: 'Hot Seller',
     description: 'Crunchy battered zinger chicken bites layered over hot fries with signature spicy drizzle.',
-    image: '/images/loaded-fries/crispy-zinger-loaded-fries.png',
+    image: '/images/loaded-fries/crispy-zinger-loaded-fries.webp',
     alt: 'Crispy Zinger Loaded Fries - Fast food favorite Rawalpindi'
   },
   {
@@ -122,7 +122,7 @@ export const menuItems = [
     price: 550,
     badge: 'Chef Special',
     description: 'The ultimate fries platter: loaded with double chicken, molten cheese, and chef dressings.',
-    image: '/images/loaded-fries/a2-special-loaded-fries.png',
+    image: '/images/loaded-fries/a2-special-loaded-fries.webp',
     alt: 'A2 Special Loaded Fries - Ultimate loaded fries Rawalpindi'
   },
 
@@ -134,7 +134,7 @@ export const menuItems = [
     price: 370,
     badge: 'Bestseller',
     description: 'Authentic homemade fragrant basmati rice layered with succulent spiced chicken and herbs.',
-    image: '/images/biryani/chicken-biryani.png',
+    image: '/images/biryani/chicken-biryani.webp',
     alt: 'Chicken Biryani - Traditional homemade chicken biryani Rawalpindi'
   },
   {
@@ -143,7 +143,7 @@ export const menuItems = [
     category: 'biryani',
     price: 270,
     description: 'Aromatic Karachi-style spiced biryani cooked with tender spiced potatoes and rich saffron aroma.',
-    image: '/images/biryani/aalu-biryani.png',
+    image: '/images/biryani/aalu-biryani.webp',
     alt: 'Aalu Biryani - Homemade authentic potato biryani Rawalpindi'
   },
 
@@ -154,7 +154,7 @@ export const menuItems = [
     category: 'combos',
     price: 700,
     description: 'Enjoy any personal creamy pasta served with a chilled refreshing soft drink.',
-    image: '/images/combos/pasta-drink-combo.png',
+    image: '/images/combos/pasta-drink-combo.webp',
     alt: 'Pasta and Drink Combo Deal - A2 Cravings fast food Rawalpindi'
   },
   {
@@ -163,7 +163,7 @@ export const menuItems = [
     category: 'combos',
     price: 470,
     description: 'A plate of delicious Chicken Biryani paired with a chilled soft drink.',
-    image: '/images/combos/biryani-drink-combo.png',
+    image: '/images/combos/biryani-drink-combo.webp',
     alt: 'Chicken Biryani and Drink Deal - Rawalpindi food delivery'
   },
   {
@@ -172,7 +172,7 @@ export const menuItems = [
     category: 'combos',
     price: 370,
     description: 'Flavorful Aalu Biryani accompanied by your favorite chilled cold drink.',
-    image: '/images/combos/aalu-biryani-drink-combo.png',
+    image: '/images/combos/aalu-biryani-drink-combo.webp',
     alt: 'Aalu Biryani with Drink Combo - A2 Cravings Rawalpindi'
   },
   {
@@ -181,7 +181,7 @@ export const menuItems = [
     category: 'combos',
     price: 500,
     description: 'Generous serving of crispy loaded fries served alongside a refreshing soft drink.',
-    image: '/images/combos/loaded-fries-drink-combo.png',
+    image: '/images/combos/loaded-fries-drink-combo.webp',
     alt: 'Loaded Fries and Drink Value Deal - Homemade food Rawalpindi'
   },
   {
@@ -191,7 +191,7 @@ export const menuItems = [
     price: 1400,
     badge: 'Family Value',
     description: '1 Chicken Cheese Pasta, 1 Chicken Biryani, 1 Fries, 2 Drinks.',
-    image: '/images/combos/siblings-combo-deal.png',
+    image: '/images/combos/siblings-combo-deal.webp',
     alt: 'Siblings Combo Deal - 1 Chicken Cheese Pasta, 1 Chicken Biryani, 1 Fries, 2 Drinks'
   },
   {
@@ -200,7 +200,7 @@ export const menuItems = [
     category: 'combos',
     price: 20,
     description: 'Cool refreshing homemade herb and cumin raita dip.',
-    image: '/images/biryani/extra-raita.png',
+    image: '/images/biryani/extra-raita.webp',
     alt: 'Extra Raita Dip - A2 Cravings Rawalpindi'
   }
 ];
