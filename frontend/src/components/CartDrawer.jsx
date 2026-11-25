@@ -438,17 +438,7 @@ export const CartDrawer = () => {
                           name="deliveryArea"
                           value={selectedAreaId}
                           onChange={handleAreaChange}
-                          className={`cart-input ${errors.deliveryArea ? 'has-error' : ''}`}
-                          style={{
-                            background: '#151515',
-                            color: '#ffffff',
-                            border: errors.deliveryArea ? '1px solid #ff4d4f' : '1px solid rgba(255, 255, 255, 0.18)',
-                            borderRadius: '8px',
-                            padding: '0.75rem 0.9rem',
-                            width: '100%',
-                            fontSize: '0.92rem',
-                            cursor: 'pointer',
-                          }}
+                          className={`cart-input cart-select ${errors.deliveryArea ? 'has-error' : ''}`}
                         >
                           <option value="">-- Select Your Delivery Area --</option>
                           {deliveryAreas.map((area) => (
@@ -527,22 +517,22 @@ export const CartDrawer = () => {
         {/* Footer with Subtotal, Delivery Fee and Primary Checkout Button */}
         {!placedOrderSuccess && cart.length > 0 && (
           <div className="cart-drawer-footer">
-            <div className="cart-price-breakdown" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.85rem', fontSize: '0.9rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
+            <div className="cart-price-breakdown">
+              <div className="cart-breakdown-row">
                 <span>Food Subtotal:</span>
                 <span>Rs {foodSubtotal.toLocaleString()}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
+              <div className="cart-breakdown-row">
                 <span>Delivery Charges:</span>
-                <span style={{ color: selectedArea ? '#FF8C00' : 'rgba(255, 255, 255, 0.5)' }}>
+                <span className="cart-delivery-charge-val">
                   {selectedArea
                     ? `Rs ${selectedArea.deliveryFee.toLocaleString()} (${selectedArea.name})`
                     : (deliveryAreas.length > 0 ? 'Select area in checkout' : 'Rs 0')}
                 </span>
               </div>
-              <div className="cart-total-row" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.12)', paddingTop: '0.5rem', marginTop: '0.2rem' }}>
-                <span className="cart-total-label" style={{ fontWeight: 800 }}>Total Payable:</span>
-                <span className="cart-total-value" style={{ fontWeight: 800, color: '#FF8C00' }}>
+              <div className="cart-total-row">
+                <span className="cart-total-label">Total Payable:</span>
+                <span className="cart-total-value">
                   Rs {grandTotal.toLocaleString()}
                 </span>
               </div>

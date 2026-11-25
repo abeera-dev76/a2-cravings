@@ -517,3 +517,66 @@
   border-color: #F87171;
   color: #F87171;
 }
+
+/* ─── Light Mode Styles for Navbar Auth & Mobile Drawer Auth ─── */
+[data-theme="light"] .nav-auth-link {
+  color: #171717;
+}
+
+[data-theme="light"] .nav-auth-link:hover {
+  color: #FF8C00;
+  background: rgba(255, 140, 0, 0.1);
+}
+
+[data-theme="light"] .nav-user-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #171717;
+}
+
+[data-theme="light"] .nav-user-btn:hover {
+  border-color: #FF8C00;
+  background: rgba(255, 140, 0, 0.1);
+  color: #FF8C00;
+}
+
+[data-theme="light"] .mobile-signin-btn {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #171717 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light"] .mobile-signin-btn:hover {
+  background: rgba(255, 140, 0, 0.12) !important;
+  border-color: #FF8C00 !important;
+  color: #FF8C00 !important;
+}
+
+[data-theme="light"] .mobile-auth-actions {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .mobile-user-card {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .mobile-user-name {
+  color: #171717;
+}
+
+[data-theme="light"] .mobile-user-email {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .mobile-profile-subbtn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #171717;
+}
+
+[data-theme="light"] .mobile-profile-subbtn:hover {
+  background: rgba(255, 140, 0, 0.12);
+  border-color: #FF8C00;
+  color: #FF8C00;
+}
+

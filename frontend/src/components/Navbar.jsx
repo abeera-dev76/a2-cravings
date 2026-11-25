@@ -165,14 +165,15 @@ export const Navbar = () => {
             aria-label="A2 Cravings Home"
           >
             <img
-              src={businessData.branding.logo}
+              src={theme === 'light' ? (businessData.branding.logo || businessData.branding.logoWhite) : (businessData.branding.logoWhite || businessData.branding.logo)}
               alt="A2 Cravings homemade fast food Rawalpindi"
               className="nav-logo-img"
               width="155"
               height="44"
               loading="eager"
               onError={(e) => {
-                e.currentTarget.style.display = 'none';
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/images/branding/logo.png';
               }}
             />
           </a>
@@ -353,11 +354,15 @@ export const Navbar = () => {
         {/* Drawer Top Header with Brand Logo & Close Button */}
         <div className="mobile-drawer-header">
           <img
-            src={businessData.branding.logo}
+            src={theme === 'light' ? (businessData.branding.logo || businessData.branding.logoWhite) : (businessData.branding.logoWhite || businessData.branding.logo)}
             alt="A2 Cravings Logo"
             className="mobile-drawer-logo"
             width="135"
             height="38"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/images/branding/logo.png';
+            }}
           />
           <div className="mobile-drawer-header-actions">
             <button
@@ -494,8 +499,7 @@ export const Navbar = () => {
           <div className="mobile-auth-actions">
             <a
               href="/signin"
-              className="btn btn-secondary mobile-auth-btn"
-              style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+              className="mobile-auth-btn mobile-signin-btn"
               onClick={(e) => {
                 e.preventDefault();
                 closeMobileMenu();
